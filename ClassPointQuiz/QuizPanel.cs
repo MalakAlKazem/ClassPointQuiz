@@ -18,11 +18,25 @@ namespace ClassPointQuiz
         private Timer loginCheckTimer;
         private Panel loginPanel;
         private Panel quizPanel;
+        private Panel quizSettingsPanel;
         private Label lblLoginStatus;
         private Button btnLogin;
         private Label lblWelcome;
         private Label lblEmail;
         private Button btnLogout;
+
+        // Quiz settings view controls
+        private Label lblSelectedQuizTitle;
+        private Label lblSelectedQuizInfo;
+        private CheckBox chkSettingsStartWithSlide;
+        private CheckBox chkSettingsMinimizeWindow;
+        private CheckBox chkSettingsAutoClose;
+        private ComboBox cmbSettingsAutoCloseTime;
+        private Button btnRunSelectedQuiz;
+        private Button btnCancelSettings;
+        private ApiClient.QuizDetails selectedQuizDetails;
+        private List<string> selectedQuizAnswers;
+        private int selectedQuizCorrectIndex;
 
         // Quiz UI controls
         private Label lblTitle;
@@ -581,6 +595,186 @@ namespace ClassPointQuiz
             quizPanel.Controls.Add(btnViewResultsPresentation);
 
             this.Controls.Add(quizPanel);
+
+            // Quiz Settings Panel (shown when selecting a quiz to run)
+            InitializeQuizSettingsPanel();
+        }
+
+        private void InitializeQuizSettingsPanel()
+        {
+            quizSettingsPanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.White,
+                AutoScroll = true,
+                Visible = false
+            };
+
+            int y = 20;
+
+            // Back button
+            btnCancelSettings = new Button
+            {
+                Text = "← Back",
+                Location = new Point(10, y),
+                Width = 80,
+                Height = 35,
+                BackColor = Color.Gray,
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnCancelSettings.FlatAppearance.BorderSize = 0;
+            btnCancelSettings.Click += BtnCancelSettings_Click;
+            quizSettingsPanel.Controls.Add(btnCancelSettings);
+            y += 50;
+
+            // Title
+            var lblSettingsTitle = new Label
+            {
+                Text = "Quiz Settings",
+                Location = new Point(20, y),
+                Width = 340,
+                Height = 35,
+                Font = new Font("Segoe UI", 18, FontStyle.Bold),
+                ForeColor = Color.FromArgb(52, 73, 94)
+            };
+            quizSettingsPanel.Controls.Add(lblSettingsTitle);
+            y += 50;
+
+            // Quiz info panel
+            var infoPanel = new Panel
+            {
+                Location = new Point(20, y),
+                Width = 340,
+                Height = 140,
+                BorderStyle = BorderStyle.FixedSingle,
+                BackColor = Color.FromArgb(236, 240, 241)
+            };
+
+            var lblInfoHeader = new Label
+            {
+                Text = "📋 Quiz Information",
+                Location = new Point(10, 10),
+                Width = 320,
+                Height = 25,
+                Font = new Font("Segoe UI", 12, FontStyle.Bold),
+                ForeColor = Color.FromArgb(52, 73, 94)
+            };
+            infoPanel.Controls.Add(lblInfoHeader);
+
+            lblSelectedQuizTitle = new Label
+            {
+                Text = "",
+                Location = new Point(10, 40),
+                Width = 320,
+                Height = 25,
+                Font = new Font("Segoe UI", 11, FontStyle.Bold),
+                ForeColor = Color.FromArgb(52, 73, 94)
+            };
+            infoPanel.Controls.Add(lblSelectedQuizTitle);
+
+            lblSelectedQuizInfo = new Label
+            {
+                Text = "",
+                Location = new Point(10, 70),
+                Width = 320,
+                Height = 60,
+                Font = new Font("Segoe UI", 9),
+                ForeColor = Color.FromArgb(52, 73, 94)
+            };
+            infoPanel.Controls.Add(lblSelectedQuizInfo);
+
+            quizSettingsPanel.Controls.Add(infoPanel);
+            y += 160;
+
+            // Settings Section
+            var lblSettingsHeader = new Label
+            {
+                Text = "⚙️ Play Options",
+                Location = new Point(20, y),
+                Width = 340,
+                Height = 30,
+                Font = new Font("Segoe UI", 12, FontStyle.Bold),
+                ForeColor = Color.FromArgb(52, 73, 94)
+            };
+            quizSettingsPanel.Controls.Add(lblSettingsHeader);
+            y += 40;
+
+            // Start with slide checkbox
+            chkSettingsStartWithSlide = new CheckBox
+            {
+                Text = "Start quiz automatically with this slide",
+                Location = new Point(30, y),
+                Width = 330,
+                Height = 25,
+                Font = new Font("Segoe UI", 10),
+                Checked = false
+            };
+            quizSettingsPanel.Controls.Add(chkSettingsStartWithSlide);
+            y += 35;
+
+            // Minimize window checkbox
+            chkSettingsMinimizeWindow = new CheckBox
+            {
+                Text = "Minimize PowerPoint when quiz opens",
+                Location = new Point(30, y),
+                Width = 330,
+                Height = 25,
+                Font = new Font("Segoe UI", 10),
+                Checked = false
+            };
+            quizSettingsPanel.Controls.Add(chkSettingsMinimizeWindow);
+            y += 35;
+
+            // Auto-close checkbox
+            chkSettingsAutoClose = new CheckBox
+            {
+                Text = "Auto-close submission after:",
+                Location = new Point(30, y),
+                Width = 200,
+                Height = 25,
+                Font = new Font("Segoe UI", 10),
+                Checked = true
+            };
+            chkSettingsAutoClose.CheckedChanged += (s, e) => cmbSettingsAutoCloseTime.Enabled = chkSettingsAutoClose.Checked;
+            quizSettingsPanel.Controls.Add(chkSettingsAutoClose);
+
+            // Auto-close time dropdown
+            cmbSettingsAutoCloseTime = new ComboBox
+            {
+                Location = new Point(30, y + 30),
+                Width = 150,
+                Height = 30,
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Font = new Font("Segoe UI", 10)
+            };
+            cmbSettingsAutoCloseTime.Items.AddRange(new object[] {
+                "1 minute", "2 minutes", "3 minutes", "5 minutes", "10 minutes"
+            });
+            cmbSettingsAutoCloseTime.SelectedIndex = 3; // Default to 5 minutes
+            quizSettingsPanel.Controls.Add(cmbSettingsAutoCloseTime);
+            y += 80;
+
+            // Run button
+            btnRunSelectedQuiz = new Button
+            {
+                Text = "▶️ Run Quiz",
+                Location = new Point(20, y),
+                Width = 340,
+                Height = 50,
+                BackColor = Color.FromArgb(46, 204, 113),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 14, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnRunSelectedQuiz.FlatAppearance.BorderSize = 0;
+            btnRunSelectedQuiz.Click += BtnRunSelectedQuiz_Click;
+            quizSettingsPanel.Controls.Add(btnRunSelectedQuiz);
+
+            this.Controls.Add(quizSettingsPanel);
         }
 
         private void InitializeServices()
@@ -1019,6 +1213,135 @@ namespace ClassPointQuiz
             catch { }
 
             return 0;
+        }
+
+        // Public method to show quiz settings with quiz data
+        public void ShowQuizSettings(ApiClient.QuizDetails quizDetails, List<string> answerTexts, int correctIndex)
+        {
+            selectedQuizDetails = quizDetails;
+            selectedQuizAnswers = answerTexts;
+            selectedQuizCorrectIndex = correctIndex;
+
+            // Update UI with quiz information
+            lblSelectedQuizTitle.Text = quizDetails.quiz.title;
+            lblSelectedQuizInfo.Text = $"Choices: {quizDetails.quiz.num_choices}\n" +
+                                      $"Allow Multiple: {(quizDetails.quiz.allow_multiple ? "Yes" : "No")}\n" +
+                                      $"Mode: {(quizDetails.quiz.competition_mode ? "Competition" : "Normal")}";
+
+            // Set auto-close time from quiz details
+            SetAutoCloseComboBox(quizDetails.quiz.close_submission_after);
+
+            // Show settings panel, hide others
+            loginPanel.Visible = false;
+            quizPanel.Visible = false;
+            quizSettingsPanel.Visible = true;
+        }
+
+        private void SetAutoCloseComboBox(int minutes)
+        {
+            switch (minutes)
+            {
+                case 1:
+                    cmbSettingsAutoCloseTime.SelectedIndex = 0;
+                    break;
+                case 2:
+                    cmbSettingsAutoCloseTime.SelectedIndex = 1;
+                    break;
+                case 3:
+                    cmbSettingsAutoCloseTime.SelectedIndex = 2;
+                    break;
+                case 5:
+                    cmbSettingsAutoCloseTime.SelectedIndex = 3;
+                    break;
+                case 10:
+                    cmbSettingsAutoCloseTime.SelectedIndex = 4;
+                    break;
+                default:
+                    cmbSettingsAutoCloseTime.SelectedIndex = 3; // Default to 5 minutes
+                    break;
+            }
+        }
+
+        private void BtnCancelSettings_Click(object sender, EventArgs e)
+        {
+            // Go back to quiz panel
+            quizSettingsPanel.Visible = false;
+            quizPanel.Visible = true;
+        }
+
+        private void BtnRunSelectedQuiz_Click(object sender, EventArgs e)
+        {
+            if (selectedQuizDetails == null || selectedQuizAnswers == null)
+            {
+                MessageBox.Show("No quiz selected!", "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            try
+            {
+                // Get settings from UI
+                bool startWithSlide = chkSettingsStartWithSlide.Checked;
+                bool minimizeWindow = chkSettingsMinimizeWindow.Checked;
+
+                // Parse auto-close minutes
+                int autoCloseMinutes = 5; // Default
+                if (chkSettingsAutoClose.Checked && cmbSettingsAutoCloseTime.SelectedItem != null)
+                {
+                    string selectedText = cmbSettingsAutoCloseTime.SelectedItem.ToString();
+                    string[] parts = selectedText.Split(' ');
+                    if (parts.Length > 0 && int.TryParse(parts[0], out int parsedMinutes))
+                    {
+                        autoCloseMinutes = parsedMinutes;
+                    }
+                }
+                else if (!chkSettingsAutoClose.Checked)
+                {
+                    autoCloseMinutes = 0; // Disabled
+                }
+
+                // Store settings globally
+                ThisAddIn.CurrentQuizId = selectedQuizDetails.quiz.quiz_id;
+                ThisAddIn.AutoCloseMinutes = autoCloseMinutes;
+                ThisAddIn.StartWithSlide = startWithSlide;
+                ThisAddIn.MinimizeWindow = minimizeWindow;
+
+                // Insert button to slide
+                pptService.InsertQuizButtonToSlide(
+                    selectedQuizDetails.question.question_text,
+                    selectedQuizAnswers,
+                    selectedQuizCorrectIndex,
+                    selectedQuizDetails.quiz.quiz_id
+                );
+
+                string settingsInfo = $"⚙️ Settings:\n" +
+                    $"   • Auto-close: {(autoCloseMinutes > 0 ? autoCloseMinutes + " minutes" : "Disabled")}\n" +
+                    $"   • Start with slide: {(startWithSlide ? "Yes" : "No")}\n" +
+                    $"   • Minimize window: {(minimizeWindow ? "Yes" : "No")}";
+
+                MessageBox.Show(
+                    $"✅ Quiz Added to Slide!\n\n" +
+                    $"A 'Run Quiz' button has been added to your current slide.\n\n" +
+                    $"📌 To start the quiz:\n" +
+                    $"1. Start your presentation (F5)\n" +
+                    $"2. Click the green 'Run Quiz' button\n" +
+                    $"3. A class code will be generated\n" +
+                    $"4. Students join at: https://quizapp-joinclass.streamlit.app\n" +
+                    $"5. Click button again to see live results\n\n" +
+                    settingsInfo,
+                    "Success",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+
+                // Go back to quiz panel
+                quizSettingsPanel.Visible = false;
+                quizPanel.Visible = true;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error: {ex.Message}", "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         protected override void Dispose(bool disposing)
