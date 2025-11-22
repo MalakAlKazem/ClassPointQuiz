@@ -279,6 +279,9 @@
     <Compile Include="QuizPanel.cs">
       <SubType>UserControl</SubType>
     </Compile>
+    <Compile Include="QuizSettingsForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="ThisAddIn.cs">
       <SubType>Code</SubType>
     </Compile>

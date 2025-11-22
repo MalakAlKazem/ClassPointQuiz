@@ -15,6 +15,8 @@ namespace ClassPointQuiz
         public static string CurrentClassCode { get; set; }
         public static int CurrentQuizId { get; set; }
         public static int AutoCloseMinutes { get; set; } = 5;
+        public static bool StartWithSlide { get; set; } = false;
+        public static bool MinimizeWindow { get; set; } = false;
 
         private static PowerPointService pptService;
         private static ThisAddIn instance;

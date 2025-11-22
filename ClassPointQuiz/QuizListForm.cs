@@ -205,33 +205,64 @@ namespace ClassPointQuiz
                     }
                 }
 
-                // Store quiz ID globally
-                ThisAddIn.CurrentQuizId = quiz.quiz_id;
-                ThisAddIn.AutoCloseMinutes = quizDetails.quiz.close_submission_after;
-
-                // Insert button to slide
-                pptService.InsertQuizButtonToSlide(
-                    quizDetails.question.question_text,
-                    answerTexts,
-                    correctIndex,
-                    quiz.quiz_id
+                // Show quiz settings dialog for user to review/edit settings
+                var settingsForm = new QuizSettingsForm(
+                    quizDetails.quiz.title,
+                    quizDetails.quiz.num_choices,
+                    quizDetails.quiz.allow_multiple,
+                    quizDetails.quiz.has_correct,
+                    quizDetails.quiz.competition_mode,
+                    quizDetails.quiz.close_submission_after
                 );
 
-                MessageBox.Show(
-                    $"✅ Quiz Added to Slide!\n\n" +
-                    $"A 'Run Quiz' button has been added to your current slide.\n\n" +
-                    $"📌 To start the quiz:\n" +
-                    $"1. Start your presentation (F5)\n" +
-                    $"2. Click the green 'Run Quiz' button\n" +
-                    $"3. A class code will be generated\n" +
-                    $"4. Students join at: https://quizapp-joinclass.streamlit.app\n" +
-                    $"5. Click button again to see live results",
-                    "Success",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Information);
+                // Set default values (these can be changed by user in the dialog)
+                settingsForm.StartWithSlide = false;
+                settingsForm.MinimizeWindow = false;
 
-                // Close the form
-                this.Close();
+                if (settingsForm.ShowDialog() == DialogResult.OK)
+                {
+                    // Store quiz ID and settings globally
+                    ThisAddIn.CurrentQuizId = quiz.quiz_id;
+                    ThisAddIn.AutoCloseMinutes = settingsForm.AutoCloseMinutes;
+                    ThisAddIn.StartWithSlide = settingsForm.StartWithSlide;
+                    ThisAddIn.MinimizeWindow = settingsForm.MinimizeWindow;
+
+                    // Insert button to slide
+                    pptService.InsertQuizButtonToSlide(
+                        quizDetails.question.question_text,
+                        answerTexts,
+                        correctIndex,
+                        quiz.quiz_id
+                    );
+
+                    string settingsInfo = $"⚙️ Settings:\n" +
+                        $"   • Auto-close: {(settingsForm.AutoCloseMinutes > 0 ? settingsForm.AutoCloseMinutes + " minutes" : "Disabled")}\n" +
+                        $"   • Start with slide: {(settingsForm.StartWithSlide ? "Yes" : "No")}\n" +
+                        $"   • Minimize window: {(settingsForm.MinimizeWindow ? "Yes" : "No")}";
+
+                    MessageBox.Show(
+                        $"✅ Quiz Added to Slide!\n\n" +
+                        $"A 'Run Quiz' button has been added to your current slide.\n\n" +
+                        $"📌 To start the quiz:\n" +
+                        $"1. Start your presentation (F5)\n" +
+                        $"2. Click the green 'Run Quiz' button\n" +
+                        $"3. A class code will be generated\n" +
+                        $"4. Students join at: https://quizapp-joinclass.streamlit.app\n" +
+                        $"5. Click button again to see live results\n\n" +
+                        settingsInfo,
+                        "Success",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information);
+
+                    // Close the form
+                    this.Close();
+                }
+                else
+                {
+                    // User cancelled, re-enable the button
+                    btn.Enabled = true;
+                    btn.Text = "▶️ Run Quiz";
+                }
             }
             catch (Exception ex)
             {
