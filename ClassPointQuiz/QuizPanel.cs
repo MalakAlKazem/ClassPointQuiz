@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
+using System.Configuration;
 
 namespace ClassPointQuiz
 {
@@ -40,7 +41,7 @@ namespace ClassPointQuiz
         private Button btnViewResponses;
         private int selectedChoices = 4;
 
-        private const string STREAMLIT_URL = "http://localhost:8501";
+        private static readonly string STREAMLIT_URL = ConfigurationManager.AppSettings["StreamlitUrl"] ?? "http://localhost:8501";
 
         // Get login file path from user's home directory
         private static string GetLoginFilePath()
@@ -796,13 +797,12 @@ namespace ClassPointQuiz
                 if (!isHealthy)
                 {
                     MessageBox.Show(
-                        "Python backend is not running!\n\n" +
-                        "Please start the backend first:\n\n" +
-                        "1. Open PowerShell\n" +
-                        "2. cd C:\\Users\\pc\\Desktop\\ClassPointQuiz\\backend\n" +
-                        "3. python main.py\n\n" +
-                        "Keep the window open!",
-                        "Backend Error",
+                        "Python backend is not running or not accessible!\n\n" +
+                        "Please ensure the backend server is started:\n\n" +
+                        "1. Navigate to your backend directory\n" +
+                        "2. Run: python main.py\n\n" +
+                        "Make sure the backend is running on the configured URL.",
+                        "Backend Connection Error",
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Error);
                     return;
