@@ -789,7 +789,19 @@ namespace ClassPointQuiz
                 bool isQuizMode = chkQuizMode.Checked;
                 bool startWithSlide = chkStartWithSlide.Checked;
                 bool minimizeWindow = chkMinimizeWindow.Checked;
-                int autoCloseMinutes = cmbAutoCloseTime.SelectedIndex + 1;
+
+                // Parse auto-close minutes from selected text (e.g., "5 minutes" -> 5)
+                int autoCloseMinutes = 1; // Default
+                if (cmbAutoCloseTime.SelectedItem != null)
+                {
+                    string selectedText = cmbAutoCloseTime.SelectedItem.ToString();
+                    string[] parts = selectedText.Split(' ');
+                    if (parts.Length > 0 && int.TryParse(parts[0], out int parsedMinutes))
+                    {
+                        autoCloseMinutes = parsedMinutes;
+                    }
+                }
+
                 int currentTeacherId = teacherId;
 
                 // NOW do the async call
@@ -821,7 +833,7 @@ namespace ClassPointQuiz
 
                 if (configForm.ShowDialog() == DialogResult.OK)
                 {
-                    // Create quiz via API
+                    // Create quiz via API - use values from configForm as user may have modified them
                     var quizRequest = new ApiClient.QuizCreateRequest
                     {
                         teacher_id = currentTeacherId,
@@ -835,7 +847,7 @@ namespace ClassPointQuiz
                         quiz_mode = isQuizMode ? "easy" : "normal",
                         start_with_slide = startWithSlide,
                         minimize_window = minimizeWindow,
-                        auto_close_minutes = autoCloseMinutes
+                        auto_close_minutes = configForm.AutoCloseMinutes // Use the value from the form
                     };
 
                     var answers = new List<ApiClient.Answer>();
