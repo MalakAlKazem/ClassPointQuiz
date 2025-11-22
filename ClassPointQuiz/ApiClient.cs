@@ -4,17 +4,29 @@ using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using System.Collections.Generic;
+using System.Configuration;
 
 namespace ClassPointQuiz
 {
     public class ApiClient
     {
         private static readonly HttpClient client = new HttpClient();
-        private const string BASE_URL = "http://localhost:8000/api";
+        private static readonly string BASE_URL;
+        private static readonly string HEALTH_URL;
+        private static readonly int MAX_RETRIES;
+        private static readonly int RETRY_DELAY_MS;
 
         static ApiClient()
         {
-            client.Timeout = TimeSpan.FromSeconds(30);
+            // Load configuration from app.config
+            BASE_URL = ConfigurationManager.AppSettings["BackendApiUrl"] ?? "http://localhost:8000/api";
+            HEALTH_URL = ConfigurationManager.AppSettings["BackendHealthUrl"] ?? "http://localhost:8000/health";
+
+            int timeoutSeconds = int.TryParse(ConfigurationManager.AppSettings["ApiTimeoutSeconds"], out int timeout) ? timeout : 30;
+            MAX_RETRIES = int.TryParse(ConfigurationManager.AppSettings["ApiMaxRetries"], out int retries) ? retries : 3;
+            RETRY_DELAY_MS = int.TryParse(ConfigurationManager.AppSettings["ApiRetryDelayMs"], out int delay) ? delay : 1000;
+
+            client.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
         }
 
         // Request Models
@@ -124,108 +136,144 @@ namespace ClassPointQuiz
             public bool is_active { get; set; }
         }
 
+        // Retry helper method with exponential backoff
+        private static async Task<T> RetryAsync<T>(Func<Task<T>> operation, string operationName)
+        {
+            int retryCount = 0;
+            while (true)
+            {
+                try
+                {
+                    return await operation();
+                }
+                catch (HttpRequestException ex)
+                {
+                    retryCount++;
+                    if (retryCount > MAX_RETRIES)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"{operationName} failed after {MAX_RETRIES} retries: {ex.Message}");
+                        throw new Exception($"Network Error: Unable to connect to backend after {MAX_RETRIES} attempts. {ex.Message}");
+                    }
+
+                    // Exponential backoff: delay * 2^(retryCount-1)
+                    int delay = RETRY_DELAY_MS * (int)Math.Pow(2, retryCount - 1);
+                    System.Diagnostics.Debug.WriteLine($"{operationName} failed (attempt {retryCount}/{MAX_RETRIES}). Retrying in {delay}ms...");
+                    await Task.Delay(delay);
+                }
+            }
+        }
+
         // API Methods
         public static async Task<QuizResponse> CreateQuizAsync(QuizCreateRequest quiz, List<Answer> answers)
         {
-            try
+            return await RetryAsync(async () =>
             {
-                // Build query string for GET parameters
-                var queryParams = $"?teacher_id={quiz.teacher_id}" +
-                    $"&title={Uri.EscapeDataString(quiz.title)}" +
-                    $"&question_text={Uri.EscapeDataString(quiz.question_text)}" +
-                    $"&num_choices={quiz.num_choices}" +
-                    $"&allow_multiple={quiz.allow_multiple.ToString().ToLower()}" +
-                    $"&has_correct={quiz.has_correct.ToString().ToLower()}" +
-                    $"&quiz_mode={quiz.quiz_mode}" +
-                    $"&start_with_slide={quiz.start_with_slide.ToString().ToLower()}" +
-                    $"&minimize_window={quiz.minimize_window.ToString().ToLower()}" +
-                    $"&auto_close_minutes={quiz.auto_close_minutes}";
-
-                // Send answers in request body
-                var requestBody = new { answers = answers };
-                var json = JsonConvert.SerializeObject(requestBody);
-                var content = new StringContent(json, Encoding.UTF8, "application/json");
-
-                var url = $"{BASE_URL}/quiz/create{queryParams}";
-                System.Diagnostics.Debug.WriteLine($"API Call: {url}");
-                System.Diagnostics.Debug.WriteLine($"Body: {json}");
-
-                var response = await client.PostAsync(url, content);
-
-                var responseContent = await response.Content.ReadAsStringAsync();
-                System.Diagnostics.Debug.WriteLine($"Response: {responseContent}");
-
-                if (!response.IsSuccessStatusCode)
+                try
                 {
-                    throw new Exception($"API Error: {response.StatusCode} - {responseContent}");
-                }
+                    // Build query string for GET parameters
+                    var queryParams = $"?teacher_id={quiz.teacher_id}" +
+                        $"&title={Uri.EscapeDataString(quiz.title)}" +
+                        $"&question_text={Uri.EscapeDataString(quiz.question_text)}" +
+                        $"&num_choices={quiz.num_choices}" +
+                        $"&allow_multiple={quiz.allow_multiple.ToString().ToLower()}" +
+                        $"&has_correct={quiz.has_correct.ToString().ToLower()}" +
+                        $"&quiz_mode={quiz.quiz_mode}" +
+                        $"&start_with_slide={quiz.start_with_slide.ToString().ToLower()}" +
+                        $"&minimize_window={quiz.minimize_window.ToString().ToLower()}" +
+                        $"&auto_close_minutes={quiz.auto_close_minutes}";
 
-                return JsonConvert.DeserializeObject<QuizResponse>(responseContent);
-            }
-            catch (HttpRequestException ex)
-            {
-                throw new Exception($"Network Error: {ex.Message}. Make sure backend is running!");
-            }
-            catch (Exception ex)
-            {
-                throw new Exception($"API Error: {ex.Message}");
-            }
+                    // Send answers in request body
+                    var requestBody = new { answers = answers };
+                    var json = JsonConvert.SerializeObject(requestBody);
+                    var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                    var url = $"{BASE_URL}/quiz/create{queryParams}";
+                    System.Diagnostics.Debug.WriteLine($"API Call: {url}");
+                    System.Diagnostics.Debug.WriteLine($"Body: {json}");
+
+                    var response = await client.PostAsync(url, content);
+
+                    var responseContent = await response.Content.ReadAsStringAsync();
+                    System.Diagnostics.Debug.WriteLine($"Response: {responseContent}");
+
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        throw new Exception($"API Error: {response.StatusCode} - {responseContent}");
+                    }
+
+                    return JsonConvert.DeserializeObject<QuizResponse>(responseContent);
+                }
+                catch (HttpRequestException)
+                {
+                    throw; // Let RetryAsync handle retries
+                }
+                catch (Exception ex)
+                {
+                    throw new Exception($"API Error: {ex.Message}");
+                }
+            }, "CreateQuiz");
         }
 
         public static async Task<SessionResponse> StartSessionAsync(int quizId)
         {
-            try
+            return await RetryAsync(async () =>
             {
-                var data = new { quiz_id = quizId };
-                var json = JsonConvert.SerializeObject(data);
-                var content = new StringContent(json, Encoding.UTF8, "application/json");
-
-                System.Diagnostics.Debug.WriteLine($"Starting session for quiz: {quizId}");
-
-                var response = await client.PostAsync($"{BASE_URL}/session/start", content);
-
-                var responseContent = await response.Content.ReadAsStringAsync();
-
-                if (!response.IsSuccessStatusCode)
+                try
                 {
-                    throw new Exception($"API Error: {response.StatusCode} - {responseContent}");
-                }
+                    var data = new { quiz_id = quizId };
+                    var json = JsonConvert.SerializeObject(data);
+                    var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-                return JsonConvert.DeserializeObject<SessionResponse>(responseContent);
-            }
-            catch (HttpRequestException ex)
-            {
-                throw new Exception($"Network Error: {ex.Message}. Make sure backend is running!");
-            }
-            catch (Exception ex)
-            {
-                throw new Exception($"API Error: {ex.Message}");
-            }
+                    System.Diagnostics.Debug.WriteLine($"Starting session for quiz: {quizId}");
+
+                    var response = await client.PostAsync($"{BASE_URL}/session/start", content);
+
+                    var responseContent = await response.Content.ReadAsStringAsync();
+
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        throw new Exception($"API Error: {response.StatusCode} - {responseContent}");
+                    }
+
+                    return JsonConvert.DeserializeObject<SessionResponse>(responseContent);
+                }
+                catch (HttpRequestException)
+                {
+                    throw; // Let RetryAsync handle retries
+                }
+                catch (Exception ex)
+                {
+                    throw new Exception($"API Error: {ex.Message}");
+                }
+            }, "StartSession");
         }
 
         public static async Task<ResultsResponse> GetResultsAsync(int sessionId)
         {
-            try
+            return await RetryAsync(async () =>
             {
-                var response = await client.GetAsync($"{BASE_URL}/session/{sessionId}/results");
-
-                var responseContent = await response.Content.ReadAsStringAsync();
-
-                if (!response.IsSuccessStatusCode)
+                try
                 {
-                    throw new Exception($"API Error: {response.StatusCode} - {responseContent}");
-                }
+                    var response = await client.GetAsync($"{BASE_URL}/session/{sessionId}/results");
 
-                return JsonConvert.DeserializeObject<ResultsResponse>(responseContent);
-            }
-            catch (HttpRequestException ex)
-            {
-                throw new Exception($"Network Error: {ex.Message}. Make sure backend is running!");
-            }
-            catch (Exception ex)
-            {
-                throw new Exception($"API Error: {ex.Message}");
-            }
+                    var responseContent = await response.Content.ReadAsStringAsync();
+
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        throw new Exception($"API Error: {response.StatusCode} - {responseContent}");
+                    }
+
+                    return JsonConvert.DeserializeObject<ResultsResponse>(responseContent);
+                }
+                catch (HttpRequestException)
+                {
+                    throw; // Let RetryAsync handle retries
+                }
+                catch (Exception ex)
+                {
+                    throw new Exception($"API Error: {ex.Message}");
+                }
+            }, "GetResults");
         }
 
         public static async Task<bool> CloseSessionAsync(int sessionId)
@@ -245,7 +293,7 @@ namespace ClassPointQuiz
         {
             try
             {
-                var response = await client.GetAsync("http://localhost:8000/health");
+                var response = await client.GetAsync(HEALTH_URL);
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -264,45 +312,69 @@ namespace ClassPointQuiz
 
         public static async Task<List<QuizItem>> GetTeacherQuizzesAsync(int teacherId)
         {
-            try
+            return await RetryAsync(async () =>
             {
-                var response = await client.GetAsync($"{BASE_URL}/teacher/{teacherId}/quizzes");
-                response.EnsureSuccessStatusCode();
+                try
+                {
+                    var response = await client.GetAsync($"{BASE_URL}/teacher/{teacherId}/quizzes");
+                    response.EnsureSuccessStatusCode();
 
-                var result = await response.Content.ReadAsStringAsync();
-                return JsonConvert.DeserializeObject<List<QuizItem>>(result);
-            }
-            catch (Exception ex)
-            {
-                throw new Exception($"API Error: {ex.Message}");
-            }
+                    var result = await response.Content.ReadAsStringAsync();
+                    return JsonConvert.DeserializeObject<List<QuizItem>>(result);
+                }
+                catch (HttpRequestException)
+                {
+                    throw; // Let RetryAsync handle retries
+                }
+                catch (Exception ex)
+                {
+                    throw new Exception($"API Error: {ex.Message}");
+                }
+            }, "GetTeacherQuizzes");
         }
 
         public static async Task<QuizDetails> GetQuizDetailsAsync(int quizId)
         {
-            try
+            return await RetryAsync(async () =>
             {
-                var response = await client.GetAsync($"{BASE_URL}/quiz/{quizId}");
-                response.EnsureSuccessStatusCode();
+                try
+                {
+                    var response = await client.GetAsync($"{BASE_URL}/quiz/{quizId}");
+                    response.EnsureSuccessStatusCode();
 
-                var result = await response.Content.ReadAsStringAsync();
-                return JsonConvert.DeserializeObject<QuizDetails>(result);
-            }
-            catch (Exception ex)
-            {
-                throw new Exception($"API Error: {ex.Message}");
-            }
+                    var result = await response.Content.ReadAsStringAsync();
+                    return JsonConvert.DeserializeObject<QuizDetails>(result);
+                }
+                catch (HttpRequestException)
+                {
+                    throw; // Let RetryAsync handle retries
+                }
+                catch (Exception ex)
+                {
+                    throw new Exception($"API Error: {ex.Message}");
+                }
+            }, "GetQuizDetails");
         }
 
         public static async Task<SessionInfo> GetSessionInfoAsync(int sessionId)
         {
             try
             {
-                var response = await client.GetAsync($"{BASE_URL}/session/{sessionId}/info");
-                response.EnsureSuccessStatusCode();
+                return await RetryAsync(async () =>
+                {
+                    try
+                    {
+                        var response = await client.GetAsync($"{BASE_URL}/session/{sessionId}/info");
+                        response.EnsureSuccessStatusCode();
 
-                var result = await response.Content.ReadAsStringAsync();
-                return JsonConvert.DeserializeObject<SessionInfo>(result);
+                        var result = await response.Content.ReadAsStringAsync();
+                        return JsonConvert.DeserializeObject<SessionInfo>(result);
+                    }
+                    catch (HttpRequestException)
+                    {
+                        throw; // Let RetryAsync handle retries
+                    }
+                }, "GetSessionInfo");
             }
             catch (Exception ex)
             {
