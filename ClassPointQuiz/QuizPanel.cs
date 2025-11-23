@@ -27,6 +27,7 @@ namespace ClassPointQuiz
         private int lastCheckedQuizId = 0;
         private Panel settingsPanel;
         private Label lblSelectedQuiz;
+        private Panel presentationModePanel;
 
         // Quiz UI controls
         private Label lblTitle;
@@ -534,47 +535,60 @@ namespace ClassPointQuiz
             quizPanel.Controls.Add(btnViewResponses);
             y += 70;
 
+            // Presentation Mode Panel (only visible when quiz is selected on slide)
+            presentationModePanel = new Panel
+            {
+                Location = new Point(0, y),
+                Width = 400,
+                Height = 240,
+                BackColor = Color.White,
+                Visible = false
+            };
+            quizPanel.Controls.Add(presentationModePanel);
+
+            int presentationY = 0;
+
             // Separator for Presentation Mode
             var separatorPresentation = new Panel
             {
-                Location = new Point(20, y),
+                Location = new Point(20, presentationY),
                 Width = 360,
                 Height = 2,
                 BackColor = Color.FromArgb(189, 195, 199)
             };
-            quizPanel.Controls.Add(separatorPresentation);
-            y += 15;
+            presentationModePanel.Controls.Add(separatorPresentation);
+            presentationY += 15;
 
             // Presentation Mode Header
             var lblPresentationMode = new Label
             {
                 Text = "Presentation Mode",
-                Location = new Point(20, y),
+                Location = new Point(20, presentationY),
                 Width = 360,
                 Height = 30,
                 Font = new Font("Segoe UI", 14, FontStyle.Bold),
                 ForeColor = Color.FromArgb(52, 152, 219)
             };
-            quizPanel.Controls.Add(lblPresentationMode);
-            y += 40;
+            presentationModePanel.Controls.Add(lblPresentationMode);
+            presentationY += 40;
 
             var lblPresentationHelp = new Label
             {
                 Text = "Use these controls during your presentation:",
-                Location = new Point(20, y),
+                Location = new Point(20, presentationY),
                 Width = 360,
                 Height = 25,
                 Font = new Font("Segoe UI", 9),
                 ForeColor = Color.Gray
             };
-            quizPanel.Controls.Add(lblPresentationHelp);
-            y += 30;
+            presentationModePanel.Controls.Add(lblPresentationHelp);
+            presentationY += 30;
 
             // Start Quiz Button (for presentation)
             var btnStartQuizPresentation = new Button
             {
                 Text = "Start Quiz",
-                Location = new Point(20, y),
+                Location = new Point(20, presentationY),
                 Width = 360,
                 Height = 50,
                 BackColor = Color.FromArgb(46, 204, 113),
@@ -585,14 +599,14 @@ namespace ClassPointQuiz
             };
             btnStartQuizPresentation.FlatAppearance.BorderSize = 0;
             btnStartQuizPresentation.Click += BtnStartQuizPresentation_Click;
-            quizPanel.Controls.Add(btnStartQuizPresentation);
-            y += 60;
+            presentationModePanel.Controls.Add(btnStartQuizPresentation);
+            presentationY += 60;
 
             // View Results Button (for presentation)
             var btnViewResultsPresentation = new Button
             {
                 Text = "View Results",
-                Location = new Point(20, y),
+                Location = new Point(20, presentationY),
                 Width = 360,
                 Height = 50,
                 BackColor = Color.FromArgb(52, 152, 219),
@@ -603,7 +617,7 @@ namespace ClassPointQuiz
             };
             btnViewResultsPresentation.FlatAppearance.BorderSize = 0;
             btnViewResultsPresentation.Click += BtnViewResultsPresentation_Click;
-            quizPanel.Controls.Add(btnViewResultsPresentation);
+            presentationModePanel.Controls.Add(btnViewResultsPresentation);
 
             this.Controls.Add(quizPanel);
         }
@@ -1097,12 +1111,13 @@ namespace ClassPointQuiz
                     }
                     else
                     {
-                        // No quiz on current slide - hide settings
+                        // No quiz on current slide - hide settings and presentation mode
                         if (this.InvokeRequired)
                         {
                             this.Invoke(new Action(() =>
                             {
                                 settingsPanel.Visible = false;
+                                presentationModePanel.Visible = false;
                                 lblSelectedQuiz.Text = "No quiz selected on current slide";
                                 lblSelectedQuiz.ForeColor = Color.FromArgb(127, 140, 141);
                                 lblSelectedQuiz.BackColor = Color.FromArgb(236, 240, 241);
@@ -1111,6 +1126,7 @@ namespace ClassPointQuiz
                         else
                         {
                             settingsPanel.Visible = false;
+                            presentationModePanel.Visible = false;
                             lblSelectedQuiz.Text = "No quiz selected on current slide";
                             lblSelectedQuiz.ForeColor = Color.FromArgb(127, 140, 141);
                             lblSelectedQuiz.BackColor = Color.FromArgb(236, 240, 241);
@@ -1162,8 +1178,9 @@ namespace ClassPointQuiz
                 lblSelectedQuiz.ForeColor = Color.White;
                 lblSelectedQuiz.BackColor = Color.FromArgb(46, 204, 113);
 
-                // Show settings panel
+                // Show settings panel and presentation mode panel
                 settingsPanel.Visible = true;
+                presentationModePanel.Visible = true;
 
                 // Update number of choices
                 selectedChoices = quizDetails.quiz.num_choices;
