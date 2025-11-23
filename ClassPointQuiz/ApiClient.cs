@@ -51,6 +51,19 @@ namespace ClassPointQuiz
             public bool is_correct { get; set; }
         }
 
+        public class QuizUpdateRequest
+        {
+            public int quiz_id { get; set; }
+            public bool? allow_multiple { get; set; }
+            public bool? has_correct { get; set; }
+            public string quiz_mode { get; set; }
+            public bool? start_with_slide { get; set; }
+            public bool? minimize_window { get; set; }
+            public int? auto_close_minutes { get; set; }
+            public int? num_choices { get; set; }
+            public string title { get; set; }
+        }
+
         // Response Models
         public class QuizResponse
         {
@@ -381,6 +394,14 @@ namespace ClassPointQuiz
                 System.Diagnostics.Debug.WriteLine($"API Error getting session info: {ex.Message}");
                 return null;
             }
+        }
+
+        public static async Task<bool> UpdateQuizAsync(QuizUpdateRequest req)
+        {
+            var json = JsonConvert.SerializeObject(req);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+            var resp = await client.PostAsync($"{BASE_URL}/api/quiz/update", content);
+            return resp.IsSuccessStatusCode;
         }
     }
 }

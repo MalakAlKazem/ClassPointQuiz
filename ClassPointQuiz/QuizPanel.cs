@@ -536,11 +536,13 @@ namespace ClassPointQuiz
             y += 70;
 
             // Presentation Mode Panel (only visible when quiz is selected on slide)
+            // Presentation Mode Panel (only visible when quiz is selected on slide)
             presentationModePanel = new Panel
             {
                 Location = new Point(0, y),
                 Width = 400,
-                Height = 240,
+                AutoSize = true,           // ← Auto-size based on content
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,  // ← Grow/shrink as needed
                 BackColor = Color.White,
                 Visible = false
             };
@@ -582,7 +584,7 @@ namespace ClassPointQuiz
                 ForeColor = Color.Gray
             };
             presentationModePanel.Controls.Add(lblPresentationHelp);
-            presentationY += 30;
+            presentationY += 100;
 
             // Start Quiz Button (for presentation)
             var btnStartQuizPresentation = new Button
