@@ -94,7 +94,7 @@ namespace ClassPointQuiz
                 runButton.Tags.Add("QuizButton", "Run");
                 runButton.Tags.Add("QuizId", quizId.ToString());
 
-                runButton.TextFrame.TextRange.Text = "▶️ Run Quiz";
+                runButton.TextFrame.TextRange.Text = "Run Quiz";
                 runButton.TextFrame.TextRange.Font.Size = 24;
                 runButton.TextFrame.TextRange.Font.Bold = Office.MsoTriState.msoTrue;
                 runButton.TextFrame.TextRange.Font.Color.RGB =
@@ -132,21 +132,7 @@ namespace ClassPointQuiz
                 instructionBox.Line.ForeColor.RGB =
                     System.Drawing.ColorTranslator.ToOle(System.Drawing.Color.FromArgb(241, 196, 15));
 
-                MessageBox.Show(
-                    "✅ Quiz Added to Slide!\n\n" +
-                    "📌 HOW TO USE:\n\n" +
-                    "1. Start presentation (F5)\n" +
-                    "2. Navigate to this slide\n" +
-                    "3. Look at the SIDEBAR on the right ➡️\n" +
-                    "4. Click '▶️ Start Quiz' button\n" +
-                    "5. Class code will be generated\n" +
-                    "6. Students join and answer\n" +
-                    "7. Click '📊 View Results' to see live data\n\n" +
-                    "💡 TIP: The sidebar stays visible during presentations!",
-                    "Success",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Information);
-
+                // Note: Success message is shown by QuizListForm, not here
                 return runButton;
             }
             catch (Exception ex)

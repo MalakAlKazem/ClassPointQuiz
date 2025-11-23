@@ -100,10 +100,10 @@ namespace ClassPointQuiz
                             pptService.UpdateButtonToShowCode(quizId, session.class_code);
 
                             MessageBox.Show(
-                                $"✅ Quiz Started!\n\n" +
-                                $"📱 CLASS CODE: {session.class_code}\n\n" +
+                                $"Quiz Started!\n\n" +
+                                $"CLASS CODE: {session.class_code}\n\n" +
                                 $"Students join at:\n" +
-                                $"🌐 https://quizapp-joinclass.streamlit.app\n\n" +
+                                $"https://quizapp-joinclass.streamlit.app\n\n" +
                                 $"Click the button again to see live results!",
                                 "Session Active",
                                 MessageBoxButtons.OK,
