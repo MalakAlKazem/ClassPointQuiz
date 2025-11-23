@@ -16,6 +16,7 @@ namespace ClassPointQuiz
         private string teacherName = "";
         private string teacherEmail = "";
         private Timer loginCheckTimer;
+        private Timer quizCheckTimer;
         private Panel loginPanel;
         private Panel quizPanel;
         private Label lblLoginStatus;
@@ -23,6 +24,9 @@ namespace ClassPointQuiz
         private Label lblWelcome;
         private Label lblEmail;
         private Button btnLogout;
+        private int lastCheckedQuizId = 0;
+        private Panel settingsPanel;
+        private Label lblSelectedQuiz;
 
         // Quiz UI controls
         private Label lblTitle;
@@ -394,73 +398,103 @@ namespace ClassPointQuiz
             quizPanel.Controls.Add(lblQuizModeLabel);
             y += 45;
 
+            // Selected Quiz Info (shown when a quiz is selected on the slide)
+            lblSelectedQuiz = new Label
+            {
+                Text = "📌 No quiz selected on current slide",
+                Location = new Point(20, y),
+                Width = 360,
+                Height = 60,
+                Font = new Font("Segoe UI", 10),
+                ForeColor = Color.FromArgb(127, 140, 141),
+                BackColor = Color.FromArgb(236, 240, 241),
+                Padding = new Padding(10),
+                TextAlign = ContentAlignment.MiddleLeft,
+                Visible = true
+            };
+            quizPanel.Controls.Add(lblSelectedQuiz);
+            y += 70;
+
+            // Settings Panel (wraps all Play Options - only visible when quiz is selected)
+            settingsPanel = new Panel
+            {
+                Location = new Point(0, y),
+                Width = 400,
+                Height = 280,
+                BackColor = Color.White,
+                Visible = false
+            };
+            quizPanel.Controls.Add(settingsPanel);
+
+            int settingsY = 0;
+
             // Play Options header
             lblPlayOptions = new Label
             {
                 Text = "Play Options",
-                Location = new Point(20, y),
+                Location = new Point(20, settingsY),
                 Width = 200,
                 Height = 30,
                 Font = new Font("Segoe UI", 12, FontStyle.Bold),
                 ForeColor = Color.FromArgb(52, 73, 94)
             };
-            quizPanel.Controls.Add(lblPlayOptions);
+            settingsPanel.Controls.Add(lblPlayOptions);
 
             // Save as default link
             var lblSaveDefault = new LinkLabel
             {
                 Text = "Save as default",
-                Location = new Point(260, y + 5),
+                Location = new Point(260, settingsY + 5),
                 Width = 120,
                 Height = 25,
                 Font = new Font("Segoe UI", 10),
                 LinkColor = Color.FromArgb(52, 152, 219)
             };
-            quizPanel.Controls.Add(lblSaveDefault);
-            y += 40;
+            settingsPanel.Controls.Add(lblSaveDefault);
+            settingsY += 40;
 
             // Start activity with slide
             chkStartWithSlide = new CheckBox
             {
                 Text = "Start activity with slide",
-                Location = new Point(20, y),
+                Location = new Point(20, settingsY),
                 Width = 360,
                 Height = 25,
                 Font = new Font("Segoe UI", 10),
                 ForeColor = Color.FromArgb(52, 73, 94)
             };
-            quizPanel.Controls.Add(chkStartWithSlide);
-            y += 35;
+            settingsPanel.Controls.Add(chkStartWithSlide);
+            settingsY += 35;
 
             // Minimize activity window
             chkMinimizeWindow = new CheckBox
             {
                 Text = "Minimize activity window after activity starts",
-                Location = new Point(20, y),
+                Location = new Point(20, settingsY),
                 Width = 360,
                 Height = 25,
                 Font = new Font("Segoe UI", 10),
                 ForeColor = Color.FromArgb(52, 73, 94)
             };
-            quizPanel.Controls.Add(chkMinimizeWindow);
-            y += 35;
+            settingsPanel.Controls.Add(chkMinimizeWindow);
+            settingsY += 35;
 
             // Auto-close submission
             chkAutoClose = new CheckBox
             {
                 Text = "Auto-close submission after",
-                Location = new Point(20, y),
+                Location = new Point(20, settingsY),
                 Width = 220,
                 Height = 25,
                 Font = new Font("Segoe UI", 10),
                 ForeColor = Color.FromArgb(52, 73, 94)
             };
-            quizPanel.Controls.Add(chkAutoClose);
+            settingsPanel.Controls.Add(chkAutoClose);
 
             // Auto-close time dropdown
             cmbAutoCloseTime = new ComboBox
             {
-                Location = new Point(250, y - 5),
+                Location = new Point(250, settingsY - 5),
                 Width = 130,
                 Height = 30,
                 DropDownStyle = ComboBoxStyle.DropDownList,
@@ -470,8 +504,11 @@ namespace ClassPointQuiz
                 "1 minute", "2 minutes", "3 minutes", "5 minutes", "10 minutes"
             });
             cmbAutoCloseTime.SelectedIndex = 0;
-            quizPanel.Controls.Add(cmbAutoCloseTime);
-            y += 50;
+            settingsPanel.Controls.Add(cmbAutoCloseTime);
+            settingsY += 50;
+
+            // Update y position to account for settings panel
+            y += (settingsPanel.Visible ? settingsPanel.Height : 0);
 
             // Create Quiz Button
             var btnCreateQuiz = new Button
@@ -631,6 +668,12 @@ namespace ClassPointQuiz
                                 quizPanel.Visible = true;
                                 lblWelcome.Text = $"👋 Welcome, {teacherName}!";
                                 lblEmail.Text = teacherEmail;
+
+                                // Start quiz check timer if not already started
+                                if (quizCheckTimer == null || !quizCheckTimer.Enabled)
+                                {
+                                    StartQuizCheckTimer();
+                                }
                             }));
                         }
                         else
@@ -639,6 +682,12 @@ namespace ClassPointQuiz
                             quizPanel.Visible = true;
                             lblWelcome.Text = $"👋 Welcome, {teacherName}!";
                             lblEmail.Text = teacherEmail;
+
+                            // Start quiz check timer if not already started
+                            if (quizCheckTimer == null || !quizCheckTimer.Enabled)
+                            {
+                                StartQuizCheckTimer();
+                            }
                         }
 
                         System.Diagnostics.Debug.WriteLine("✅ UI Updated - Login successful!");
@@ -720,10 +769,19 @@ namespace ClassPointQuiz
                     File.Delete(loginFile);
                 }
 
+                // Stop quiz check timer
+                if (quizCheckTimer != null)
+                {
+                    quizCheckTimer.Stop();
+                    quizCheckTimer.Dispose();
+                    quizCheckTimer = null;
+                }
+
                 // Reset state
                 teacherId = 0;
                 teacherName = "";
                 teacherEmail = "";
+                lastCheckedQuizId = 0;
 
                 // Show login panel
                 quizPanel.Visible = false;
@@ -1021,6 +1079,184 @@ namespace ClassPointQuiz
             return 0;
         }
 
+        private void StartQuizCheckTimer()
+        {
+            quizCheckTimer = new Timer();
+            quizCheckTimer.Interval = 1000; // Check every second
+            quizCheckTimer.Tick += async (s, e) =>
+            {
+                await CheckCurrentSlideQuizAsync();
+            };
+            quizCheckTimer.Start();
+            System.Diagnostics.Debug.WriteLine("✅ Quiz check timer started (every 1 second)");
+        }
+
+        private async Task CheckCurrentSlideQuizAsync()
+        {
+            try
+            {
+                int currentQuizId = GetCurrentSlideQuizId();
+
+                // Only update if quiz ID has changed
+                if (currentQuizId != lastCheckedQuizId)
+                {
+                    lastCheckedQuizId = currentQuizId;
+
+                    if (currentQuizId > 0)
+                    {
+                        // Load quiz settings
+                        await LoadQuizSettingsAsync(currentQuizId);
+                    }
+                    else
+                    {
+                        // No quiz on current slide - hide settings
+                        if (this.InvokeRequired)
+                        {
+                            this.Invoke(new Action(() =>
+                            {
+                                settingsPanel.Visible = false;
+                                lblSelectedQuiz.Text = "📌 No quiz selected on current slide";
+                                lblSelectedQuiz.ForeColor = Color.FromArgb(127, 140, 141);
+                                lblSelectedQuiz.BackColor = Color.FromArgb(236, 240, 241);
+                            }));
+                        }
+                        else
+                        {
+                            settingsPanel.Visible = false;
+                            lblSelectedQuiz.Text = "📌 No quiz selected on current slide";
+                            lblSelectedQuiz.ForeColor = Color.FromArgb(127, 140, 141);
+                            lblSelectedQuiz.BackColor = Color.FromArgb(236, 240, 241);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error checking quiz on slide: {ex.Message}");
+            }
+        }
+
+        private async Task LoadQuizSettingsAsync(int quizId)
+        {
+            try
+            {
+                // Fetch quiz details from API
+                var quizDetails = await ApiClient.GetQuizDetailsAsync(quizId);
+
+                if (quizDetails != null && quizDetails.quiz != null)
+                {
+                    // Update UI on main thread
+                    if (this.InvokeRequired)
+                    {
+                        this.Invoke(new Action(() =>
+                        {
+                            UpdateQuizSettingsUI(quizDetails);
+                        }));
+                    }
+                    else
+                    {
+                        UpdateQuizSettingsUI(quizDetails);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error loading quiz settings: {ex.Message}");
+            }
+        }
+
+        private void UpdateQuizSettingsUI(ApiClient.QuizDetails quizDetails)
+        {
+            try
+            {
+                // Update selected quiz label
+                lblSelectedQuiz.Text = $"📌 Selected Quiz: {quizDetails.quiz.title}";
+                lblSelectedQuiz.ForeColor = Color.White;
+                lblSelectedQuiz.BackColor = Color.FromArgb(46, 204, 113);
+
+                // Show settings panel
+                settingsPanel.Visible = true;
+
+                // Update number of choices
+                selectedChoices = quizDetails.quiz.num_choices;
+                foreach (Control ctrl in choicesPanel.Controls)
+                {
+                    if (ctrl is Button btn)
+                    {
+                        if ((int)btn.Tag == selectedChoices)
+                        {
+                            btn.BackColor = Color.FromArgb(52, 152, 219);
+                            btn.ForeColor = Color.White;
+                        }
+                        else
+                        {
+                            btn.BackColor = Color.FromArgb(236, 240, 241);
+                            btn.ForeColor = Color.FromArgb(52, 73, 94);
+                        }
+                    }
+                }
+
+                // Update allow multiple
+                chkMultiple.Checked = quizDetails.quiz.allow_multiple;
+
+                // Update has correct answer
+                chkHasCorrect.Checked = quizDetails.quiz.has_correct;
+
+                // Update correct answer dropdown
+                UpdateCorrectAnswerDropdown();
+                if (quizDetails.answers != null && quizDetails.answers.Count > 0)
+                {
+                    for (int i = 0; i < quizDetails.answers.Count; i++)
+                    {
+                        if (quizDetails.answers[i].is_correct && i < cmbCorrectAnswer.Items.Count)
+                        {
+                            cmbCorrectAnswer.SelectedIndex = i;
+                            break;
+                        }
+                    }
+                }
+
+                // Update quiz mode (competition_mode)
+                chkQuizMode.Checked = quizDetails.quiz.competition_mode;
+
+                // Update auto-close settings
+                if (quizDetails.quiz.close_submission_after > 0)
+                {
+                    chkAutoClose.Checked = true;
+                    int autoCloseMinutes = quizDetails.quiz.close_submission_after;
+
+                    // Find matching item in dropdown
+                    string searchText = $"{autoCloseMinutes} minute";
+                    if (autoCloseMinutes > 1) searchText += "s";
+
+                    for (int i = 0; i < cmbAutoCloseTime.Items.Count; i++)
+                    {
+                        if (cmbAutoCloseTime.Items[i].ToString() == searchText)
+                        {
+                            cmbAutoCloseTime.SelectedIndex = i;
+                            break;
+                        }
+                    }
+
+                    // Store in global state
+                    ThisAddIn.AutoCloseMinutes = autoCloseMinutes;
+                }
+                else
+                {
+                    chkAutoClose.Checked = false;
+                }
+
+                // Store quiz ID in global state
+                ThisAddIn.CurrentQuizId = quizDetails.quiz.quiz_id;
+
+                System.Diagnostics.Debug.WriteLine($"✅ Loaded settings for quiz: {quizDetails.quiz.title}");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error updating UI: {ex.Message}");
+            }
+        }
+
         protected override void Dispose(bool disposing)
         {
             if (disposing)
@@ -1029,6 +1265,12 @@ namespace ClassPointQuiz
                 {
                     loginCheckTimer.Stop();
                     loginCheckTimer.Dispose();
+                }
+
+                if (quizCheckTimer != null)
+                {
+                    quizCheckTimer.Stop();
+                    quizCheckTimer.Dispose();
                 }
             }
             base.Dispose(disposing);
