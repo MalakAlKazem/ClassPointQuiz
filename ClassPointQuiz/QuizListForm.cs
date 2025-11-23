@@ -30,7 +30,7 @@ namespace ClassPointQuiz
             // Header
             var lblHeader = new Label
             {
-                Text = "📋 My Quizzes",
+                Text = "My Quizzes",
                 Location = new Point(20, 20),
                 Width = 640,
                 Height = 40,
@@ -150,7 +150,7 @@ namespace ClassPointQuiz
             // Run button
             var btnRun = new Button
             {
-                Text = "▶️ Run Quiz",
+                Text = "Run Quiz",
                 Location = new Point(450, 35),
                 Width = 130,
                 Height = 50,
@@ -188,7 +188,7 @@ namespace ClassPointQuiz
                     MessageBox.Show("Failed to load quiz details!", "Error",
                         MessageBoxButtons.OK, MessageBoxIcon.Error);
                     btn.Enabled = true;
-                    btn.Text = "▶️ Run Quiz";
+                    btn.Text = "Run Quiz";
                     return;
                 }
 
@@ -218,14 +218,16 @@ namespace ClassPointQuiz
                 );
 
                 MessageBox.Show(
-                    $"✅ Quiz Added to Slide!\n\n" +
+                    $"Quiz Added to Slide!\n\n" +
                     $"A 'Run Quiz' button has been added to your current slide.\n\n" +
-                    $"📌 To start the quiz:\n" +
+                    $"To start the quiz:\n" +
                     $"1. Start your presentation (F5)\n" +
-                    $"2. Click the green 'Run Quiz' button\n" +
-                    $"3. A class code will be generated\n" +
-                    $"4. Students join at: https://quizapp-joinclass.streamlit.app\n" +
-                    $"5. Click button again to see live results",
+                    $"2. Navigate to this slide\n" +
+                    $"3. Look at the SIDEBAR on the right\n" +
+                    $"4. Click 'Start Quiz' button\n" +
+                    $"5. Class code will be generated\n" +
+                    $"6. Students join at: https://quizapp-joinclass.streamlit.app\n" +
+                    $"7. Click 'View Results' to see live responses",
                     "Success",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Information);
@@ -238,7 +240,7 @@ namespace ClassPointQuiz
                 MessageBox.Show($"Error: {ex.Message}", "Error",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
                 btn.Enabled = true;
-                btn.Text = "▶️ Run Quiz";
+                btn.Text = "Run Quiz";
             }
         }
     }

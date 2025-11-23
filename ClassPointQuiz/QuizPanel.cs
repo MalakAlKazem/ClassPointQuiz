@@ -81,7 +81,7 @@ namespace ClassPointQuiz
             // Logo/Header
             var lblHeader = new Label
             {
-                Text = "📚 ClassPoint Quiz",
+                Text = "ClassPoint Quiz",
                 Location = new Point(20, 30),
                 Width = 360,
                 Height = 40,
@@ -91,23 +91,11 @@ namespace ClassPointQuiz
             };
             loginPanel.Controls.Add(lblHeader);
 
-            // Status Icon
-            var lblIcon = new Label
-            {
-                Text = "🔒",
-                Location = new Point(20, 100),
-                Width = 360,
-                Height = 80,
-                Font = new Font("Segoe UI", 48),
-                TextAlign = ContentAlignment.MiddleCenter
-            };
-            loginPanel.Controls.Add(lblIcon);
-
             // Login status
             lblLoginStatus = new Label
             {
                 Text = "Not Logged In",
-                Location = new Point(20, 190),
+                Location = new Point(20, 120),
                 Width = 360,
                 Height = 35,
                 Font = new Font("Segoe UI", 16, FontStyle.Bold),
@@ -120,7 +108,7 @@ namespace ClassPointQuiz
             var lblInstructions = new Label
             {
                 Text = "Please login to create quizzes",
-                Location = new Point(20, 235),
+                Location = new Point(20, 165),
                 Width = 360,
                 Height = 25,
                 Font = new Font("Segoe UI", 11),
@@ -132,8 +120,8 @@ namespace ClassPointQuiz
             // Login button
             btnLogin = new Button
             {
-                Text = "🌐 Login to ClassPoint Quiz",
-                Location = new Point(50, 290),
+                Text = "Login to ClassPoint Quiz",
+                Location = new Point(50, 220),
                 Width = 300,
                 Height = 50,
                 BackColor = Color.FromArgb(52, 152, 219),
@@ -149,8 +137,8 @@ namespace ClassPointQuiz
             // Debug: Manual check button
             var btnCheckLogin = new Button
             {
-                Text = "🔍 Check Login Status (Debug)",
-                Location = new Point(50, 355),
+                Text = "Check Login Status (Debug)",
+                Location = new Point(50, 285),
                 Width = 300,
                 Height = 40,
                 BackColor = Color.FromArgb(46, 204, 113),
@@ -178,7 +166,7 @@ namespace ClassPointQuiz
             var lblHelp = new Label
             {
                 Text = "This will open the login page\nin your web browser",
-                Location = new Point(20, 410),
+                Location = new Point(20, 340),
                 Width = 360,
                 Height = 40,
                 Font = new Font("Segoe UI", 9),
@@ -213,7 +201,7 @@ namespace ClassPointQuiz
 
             lblWelcome = new Label
             {
-                Text = "👋 Welcome!",
+                Text = "Welcome!",
                 Location = new Point(15, 10),
                 Width = 340,
                 Height = 30,
@@ -385,10 +373,10 @@ namespace ClassPointQuiz
             };
             quizPanel.Controls.Add(chkQuizMode);
 
-            // Stars (Easy)
+            // Quiz mode label
             lblQuizModeLabel = new Label
             {
-                Text = "⭐ (Easy)",
+                Text = "(Easy)",
                 Location = new Point(145, y),
                 Width = 100,
                 Height = 25,
@@ -401,7 +389,7 @@ namespace ClassPointQuiz
             // Selected Quiz Info (shown when a quiz is selected on the slide)
             lblSelectedQuiz = new Label
             {
-                Text = "📌 No quiz selected on current slide",
+                Text = "No quiz selected on current slide",
                 Location = new Point(20, y),
                 Width = 360,
                 Height = 60,
@@ -513,7 +501,7 @@ namespace ClassPointQuiz
             // Create Quiz Button
             var btnCreateQuiz = new Button
             {
-                Text = "➕ Create Quiz",
+                Text = "Create Quiz",
                 Location = new Point(20, y),
                 Width = 360,
                 Height = 50,
@@ -531,7 +519,7 @@ namespace ClassPointQuiz
             // View My Quizzes Button
             btnViewResponses = new Button
             {
-                Text = "📋 View My Quizzes",
+                Text = "View My Quizzes",
                 Location = new Point(20, y),
                 Width = 360,
                 Height = 50,
@@ -560,7 +548,7 @@ namespace ClassPointQuiz
             // Presentation Mode Header
             var lblPresentationMode = new Label
             {
-                Text = "🎬 Presentation Mode",
+                Text = "Presentation Mode",
                 Location = new Point(20, y),
                 Width = 360,
                 Height = 30,
@@ -585,7 +573,7 @@ namespace ClassPointQuiz
             // Start Quiz Button (for presentation)
             var btnStartQuizPresentation = new Button
             {
-                Text = "▶️ Start Quiz",
+                Text = "Start Quiz",
                 Location = new Point(20, y),
                 Width = 360,
                 Height = 50,
@@ -603,7 +591,7 @@ namespace ClassPointQuiz
             // View Results Button (for presentation)
             var btnViewResultsPresentation = new Button
             {
-                Text = "📊 View Results",
+                Text = "View Results",
                 Location = new Point(20, y),
                 Width = 360,
                 Height = 50,
@@ -666,7 +654,7 @@ namespace ClassPointQuiz
                             {
                                 loginPanel.Visible = false;
                                 quizPanel.Visible = true;
-                                lblWelcome.Text = $"👋 Welcome, {teacherName}!";
+                                lblWelcome.Text = $"Welcome, {teacherName}!";
                                 lblEmail.Text = teacherEmail;
 
                                 // Start quiz check timer if not already started
@@ -680,7 +668,7 @@ namespace ClassPointQuiz
                         {
                             loginPanel.Visible = false;
                             quizPanel.Visible = true;
-                            lblWelcome.Text = $"👋 Welcome, {teacherName}!";
+                            lblWelcome.Text = $"Welcome, {teacherName}!";
                             lblEmail.Text = teacherEmail;
 
                             // Start quiz check timer if not already started
@@ -735,7 +723,7 @@ namespace ClassPointQuiz
                 });
 
                 MessageBox.Show(
-                    "🌐 Opening login page...\n\n" +
+                    "Opening login page...\n\n" +
                     "Please login in your web browser.\n" +
                     "After login, close the browser and return to PowerPoint.\n\n" +
                     "This sidebar will automatically update!",
@@ -922,7 +910,7 @@ namespace ClassPointQuiz
                     var result = await ApiClient.CreateQuizAsync(quizRequest, answers);
 
                     MessageBox.Show(
-                        $"✅ Quiz Created Successfully!\n\n" +
+                        $"Quiz Created Successfully!\n\n" +
                         $"Quiz ID: {result.quiz_id}\n" +
                         $"Question: {configForm.QuestionText}\n\n" +
                         $"Click 'View My Quizzes' to see it and run it.",
@@ -1006,11 +994,11 @@ namespace ClassPointQuiz
                 ThisAddIn.CurrentClassCode = session.class_code;
 
                 MessageBox.Show(
-                    $"✅ Quiz Started!\n\n" +
-                    $"📱 CLASS CODE: {session.class_code}\n\n" +
+                    $"Quiz Started!\n\n" +
+                    $"CLASS CODE: {session.class_code}\n\n" +
                     $"Students join at:\n" +
-                    $"🌐 https://quizapp-joinclass.streamlit.app\n\n" +
-                    $"Click '📊 View Results' to see live responses!",
+                    $"https://quizapp-joinclass.streamlit.app\n\n" +
+                    $"Click 'View Results' to see live responses!",
                     "Session Active",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Information);
@@ -1030,7 +1018,7 @@ namespace ClassPointQuiz
                 {
                     MessageBox.Show(
                         "No active session!\n\n" +
-                        "Please start a quiz first by clicking '▶️ Start Quiz'.",
+                        "Please start a quiz first by clicking 'Start Quiz'.",
                         "No Session",
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Warning);
@@ -1115,7 +1103,7 @@ namespace ClassPointQuiz
                             this.Invoke(new Action(() =>
                             {
                                 settingsPanel.Visible = false;
-                                lblSelectedQuiz.Text = "📌 No quiz selected on current slide";
+                                lblSelectedQuiz.Text = "No quiz selected on current slide";
                                 lblSelectedQuiz.ForeColor = Color.FromArgb(127, 140, 141);
                                 lblSelectedQuiz.BackColor = Color.FromArgb(236, 240, 241);
                             }));
@@ -1123,7 +1111,7 @@ namespace ClassPointQuiz
                         else
                         {
                             settingsPanel.Visible = false;
-                            lblSelectedQuiz.Text = "📌 No quiz selected on current slide";
+                            lblSelectedQuiz.Text = "No quiz selected on current slide";
                             lblSelectedQuiz.ForeColor = Color.FromArgb(127, 140, 141);
                             lblSelectedQuiz.BackColor = Color.FromArgb(236, 240, 241);
                         }
@@ -1170,7 +1158,7 @@ namespace ClassPointQuiz
             try
             {
                 // Update selected quiz label
-                lblSelectedQuiz.Text = $"📌 Selected Quiz: {quizDetails.quiz.title}";
+                lblSelectedQuiz.Text = $"Selected Quiz: {quizDetails.quiz.title}";
                 lblSelectedQuiz.ForeColor = Color.White;
                 lblSelectedQuiz.BackColor = Color.FromArgb(46, 204, 113);
 
