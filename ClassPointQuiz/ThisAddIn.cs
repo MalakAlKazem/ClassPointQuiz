@@ -16,6 +16,8 @@ namespace ClassPointQuiz
         public static int CurrentQuizId { get; set; }
         public static int AutoCloseMinutes { get; set; } = 5;
 
+        public static DateTime CurrentSessionStartTime = DateTime.MinValue;
+
         private static PowerPointService pptService;
         private static ThisAddIn instance;
         private static System.Windows.Forms.Control uiInvoker = new System.Windows.Forms.Control();
@@ -90,9 +92,28 @@ namespace ClassPointQuiz
                 {
                     try
                     {
-                        var session = await ApiClient.StartSessionAsync(quizId);
+                        var session = await ApiClient.StartSessionAsync(quizId, ThisAddIn.AutoCloseMinutes);
                         CurrentSessionId = session.session_id;
                         CurrentClassCode = session.class_code;
+
+                        // ✅ Get the ACTUAL start time from database
+                        var sessionInfo = await ApiClient.GetSessionInfoAsync(session.session_id);
+                        if (sessionInfo != null && sessionInfo.started_at != DateTime.MinValue)
+                        {
+                            // Parse the datetime properly
+                            ThisAddIn.CurrentSessionStartTime = sessionInfo.started_at.Kind == DateTimeKind.Utc
+                                ? sessionInfo.started_at.ToLocalTime()
+                                : sessionInfo.started_at;
+
+                            System.Diagnostics.Debug.WriteLine($"✅ Session created at (UTC): {sessionInfo.started_at}");
+                            System.Diagnostics.Debug.WriteLine($"✅ Session created at (Local): {ThisAddIn.CurrentSessionStartTime}");
+                        }
+                        else
+                        {
+                            // Fallback if API fails
+                            ThisAddIn.CurrentSessionStartTime = DateTime.Now;
+                            System.Diagnostics.Debug.WriteLine("⚠️ Using fallback time: DateTime.Now");
+                        }
 
                         // Update button on UI thread
                         uiInvoker.Invoke(new Action(() =>

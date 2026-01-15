@@ -51,6 +51,19 @@ namespace ClassPointQuiz
             public bool is_correct { get; set; }
         }
 
+        public class QuizUpdateRequest
+        {
+            public int quiz_id { get; set; }
+            public bool? allow_multiple { get; set; }
+            public bool? has_correct { get; set; }
+            public string quiz_mode { get; set; }
+            public bool? start_with_slide { get; set; }
+            public bool? minimize_window { get; set; }
+            public int? auto_close_minutes { get; set; }
+            public int? num_choices { get; set; }
+            public string title { get; set; }
+        }
+
         // Response Models
         public class QuizResponse
         {
@@ -131,10 +144,31 @@ namespace ClassPointQuiz
             public int session_id { get; set; }
             public int quiz_id { get; set; }
             public string class_code { get; set; }
+
+            [JsonProperty("started_at")]
             public DateTime started_at { get; set; }
+
             public DateTime? ended_at { get; set; }
             public bool is_active { get; set; }
+            public int? auto_close_minutes { get; set; }
         }
+        public class StudentResponseDetail
+        {
+            public int student_id { get; set; }
+            public string student_name { get; set; }
+            public string answer_text { get; set; }
+            public bool is_correct { get; set; }
+            public string submitted_at { get; set; }
+        }
+
+        public class StudentDetailsResponse
+        {
+            public List<StudentResponseDetail> students { get; set; }
+            public int total_students { get; set; }
+            public int total_responses { get; set; }
+        }
+
+
 
         // Retry helper method with exponential backoff
         private static async Task<T> RetryAsync<T>(Func<Task<T>> operation, string operationName)
@@ -214,21 +248,29 @@ namespace ClassPointQuiz
             }, "CreateQuiz");
         }
 
-        public static async Task<SessionResponse> StartSessionAsync(int quizId)
+        // ✅ FIXED: Now accepts override_auto_close_minutes
+        public static async Task<SessionResponse> StartSessionAsync(int quizId, int? overrideAutoCloseMinutes = null)
         {
             return await RetryAsync(async () =>
             {
                 try
                 {
-                    var data = new { quiz_id = quizId };
+                    var data = new
+                    {
+                        quiz_id = quizId,
+                        override_auto_close_minutes = overrideAutoCloseMinutes
+                    };
                     var json = JsonConvert.SerializeObject(data);
                     var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-                    System.Diagnostics.Debug.WriteLine($"Starting session for quiz: {quizId}");
+                    System.Diagnostics.Debug.WriteLine($"🚀 Starting session for quiz: {quizId}");
+                    System.Diagnostics.Debug.WriteLine($"⏱️  Override auto-close minutes: {overrideAutoCloseMinutes}");
+                    System.Diagnostics.Debug.WriteLine($"📦 Request body: {json}");
 
                     var response = await client.PostAsync($"{BASE_URL}/session/start", content);
 
                     var responseContent = await response.Content.ReadAsStringAsync();
+                    System.Diagnostics.Debug.WriteLine($"📨 Response: {responseContent}");
 
                     if (!response.IsSuccessStatusCode)
                     {
@@ -274,6 +316,39 @@ namespace ClassPointQuiz
                     throw new Exception($"API Error: {ex.Message}");
                 }
             }, "GetResults");
+        }
+        public static async Task<StudentDetailsResponse> GetStudentResponsesAsync(int sessionId)
+        {
+            return await RetryAsync(async () =>
+            {
+                try
+                {
+                    System.Diagnostics.Debug.WriteLine($"📊 Getting student responses for session: {sessionId}");
+
+                    var response = await client.GetAsync($"{BASE_URL}/session/{sessionId}/student-responses");
+                    var responseContent = await response.Content.ReadAsStringAsync();
+
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"❌ API Error: {response.StatusCode} - {responseContent}");
+                        throw new Exception($"API Error: {response.StatusCode}");
+                    }
+
+                    System.Diagnostics.Debug.WriteLine($"✅ Got student responses");
+
+                    var result = JsonConvert.DeserializeObject<StudentDetailsResponse>(responseContent);
+                    return result;
+                }
+                catch (HttpRequestException)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"❌ Exception: {ex.Message}");
+                    throw new Exception($"Failed to get student responses: {ex.Message}");
+                }
+            }, "GetStudentResponses");
         }
 
         public static async Task<bool> CloseSessionAsync(int sessionId)
@@ -381,6 +456,14 @@ namespace ClassPointQuiz
                 System.Diagnostics.Debug.WriteLine($"API Error getting session info: {ex.Message}");
                 return null;
             }
+        }
+
+        public static async Task<bool> UpdateQuizAsync(QuizUpdateRequest req)
+        {
+            var json = JsonConvert.SerializeObject(req);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+            var resp = await client.PostAsync($"{BASE_URL}/api/quiz/update", content);
+            return resp.IsSuccessStatusCode;
         }
     }
 }

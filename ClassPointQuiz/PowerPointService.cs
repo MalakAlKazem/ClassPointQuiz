@@ -258,5 +258,240 @@ namespace ClassPointQuiz
 
             return null;
         }
+
+        /// <summary>
+        /// Insert quiz results into a new PowerPoint slide
+        /// </summary>
+        public bool InsertResultsToSlide(string classCode, List<ApiClient.ResultItem> results, int totalResponses, int sessionId)
+        {
+            try
+            {
+                // Check if any presentations are open
+                if (pptApp.Presentations.Count == 0)
+                {
+                    MessageBox.Show("Please open or create a PowerPoint presentation first.",
+                        "No Presentation", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return false;
+                }
+
+                var presentation = pptApp.ActivePresentation;
+
+                // Get slide dimensions to ensure everything fits
+                float slideWidth = presentation.PageSetup.SlideWidth;
+                float slideHeight = presentation.PageSetup.SlideHeight;
+
+                // Create new slide
+                var slide = presentation.Slides.Add(
+                    presentation.Slides.Count + 1,
+                    PowerPoint.PpSlideLayout.ppLayoutBlank
+                );
+
+                slide.Name = $"Results_{classCode}_{sessionId}";
+
+                // Calculate margins and dimensions based on slide size
+                float marginX = slideWidth * 0.05f; // 5% margin
+                float marginY = slideHeight * 0.04f; // 4% margin
+                float contentWidth = slideWidth - (2 * marginX);
+
+                // Add Title
+                var titleBox = slide.Shapes.AddTextbox(
+                    Office.MsoTextOrientation.msoTextOrientationHorizontal,
+                    marginX, marginY, contentWidth, slideHeight * 0.08f
+                );
+                titleBox.TextFrame.TextRange.Text = $"📊 Quiz Results - {classCode}";
+                titleBox.TextFrame.TextRange.Font.Size = (int)(slideHeight * 0.050f); // Slightly smaller
+                titleBox.TextFrame.TextRange.Font.Bold = Office.MsoTriState.msoTrue;
+                titleBox.TextFrame.TextRange.Font.Color.RGB =
+                    System.Drawing.ColorTranslator.ToOle(System.Drawing.Color.FromArgb(52, 152, 219));
+                titleBox.TextFrame.TextRange.ParagraphFormat.Alignment =
+                    PowerPoint.PpParagraphAlignment.ppAlignCenter;
+
+                // Add subtitle with total responses
+                float subtitleY = marginY + slideHeight * 0.09f;
+                var subtitleBox = slide.Shapes.AddTextbox(
+                    Office.MsoTextOrientation.msoTextOrientationHorizontal,
+                    marginX, subtitleY, contentWidth, slideHeight * 0.04f
+                );
+                subtitleBox.TextFrame.TextRange.Text = $"Total Responses: {totalResponses}";
+                subtitleBox.TextFrame.TextRange.Font.Size = (int)(slideHeight * 0.025f);
+                subtitleBox.TextFrame.TextRange.Font.Color.RGB =
+                    System.Drawing.ColorTranslator.ToOle(System.Drawing.Color.FromArgb(127, 140, 141));
+                subtitleBox.TextFrame.TextRange.ParagraphFormat.Alignment =
+                    PowerPoint.PpParagraphAlignment.ppAlignCenter;
+
+                // Calculate bar chart dimensions - reduced to make more room for legend
+                float chartStartY = marginY + slideHeight * 0.16f;
+                float chartWidth = contentWidth * 0.95f;
+                float barAreaHeight = slideHeight * 0.35f; // Reduced from 0.40f to make room for legend
+
+                // Calculate bar dimensions
+                int barCount = results.Count;
+                float maxBarWidth = slideWidth * 0.12f; // Max 12% of slide width per bar
+                float barWidth = Math.Min(chartWidth / barCount * 0.7f, maxBarWidth);
+                float spacing = (chartWidth - (barWidth * barCount)) / (barCount + 1);
+
+                float x = marginX + spacing;
+
+                // Draw bars for each answer
+                foreach (var result in results)
+                {
+                    float barHeight = barAreaHeight * (float)(result.percentage / 100.0);
+                    if (barHeight < 5 && result.count > 0) barHeight = 5;
+
+                    float barY = chartStartY + barAreaHeight - barHeight;
+
+                    // Create bar
+                    var bar = slide.Shapes.AddShape(
+                        Office.MsoAutoShapeType.msoShapeRoundedRectangle,
+                        x, barY, barWidth * 0.85f, barHeight
+                    );
+
+                    bar.Fill.ForeColor.RGB = System.Drawing.ColorTranslator.ToOle(
+                        result.is_correct ?
+                            System.Drawing.Color.FromArgb(46, 204, 113) :
+                            System.Drawing.Color.FromArgb(52, 152, 219)
+                    );
+                    bar.Fill.Solid();
+                    bar.Line.Visible = Office.MsoTriState.msoFalse;
+
+                    // Add percentage label above bar
+                    var percentLabel = slide.Shapes.AddTextbox(
+                        Office.MsoTextOrientation.msoTextOrientationHorizontal,
+                        x, barY - slideHeight * 0.040f, barWidth * 0.85f, slideHeight * 0.035f
+                    );
+                    percentLabel.TextFrame.TextRange.Text = $"{result.percentage:F1}%";
+                    percentLabel.TextFrame.TextRange.Font.Size = (int)(slideHeight * 0.020f);
+                    percentLabel.TextFrame.TextRange.Font.Bold = Office.MsoTriState.msoTrue;
+                    percentLabel.TextFrame.TextRange.Font.Color.RGB =
+                        System.Drawing.ColorTranslator.ToOle(System.Drawing.Color.FromArgb(52, 73, 94));
+                    percentLabel.TextFrame.TextRange.ParagraphFormat.Alignment =
+                        PowerPoint.PpParagraphAlignment.ppAlignCenter;
+
+                    // Add count label
+                    var countLabel = slide.Shapes.AddTextbox(
+                        Office.MsoTextOrientation.msoTextOrientationHorizontal,
+                        x, barY - slideHeight * 0.075f, barWidth * 0.85f, slideHeight * 0.030f
+                    );
+                    countLabel.TextFrame.TextRange.Text = $"({result.count})";
+                    countLabel.TextFrame.TextRange.Font.Size = (int)(slideHeight * 0.016f);
+                    countLabel.TextFrame.TextRange.Font.Color.RGB =
+                        System.Drawing.ColorTranslator.ToOle(System.Drawing.Color.FromArgb(127, 140, 141));
+                    countLabel.TextFrame.TextRange.ParagraphFormat.Alignment =
+                        PowerPoint.PpParagraphAlignment.ppAlignCenter;
+
+                    // Add answer letter below bar
+                    var answerLabel = slide.Shapes.AddTextbox(
+                        Office.MsoTextOrientation.msoTextOrientationHorizontal,
+                        x, chartStartY + barAreaHeight + slideHeight * 0.01f, barWidth * 0.85f, slideHeight * 0.045f
+                    );
+                    answerLabel.TextFrame.TextRange.Text = $"{(char)('A' + result.answer_order)}";
+                    answerLabel.TextFrame.TextRange.Font.Size = (int)(slideHeight * 0.028f);
+                    answerLabel.TextFrame.TextRange.Font.Bold = Office.MsoTriState.msoTrue;
+                    answerLabel.TextFrame.TextRange.Font.Color.RGB =
+                        System.Drawing.ColorTranslator.ToOle(
+                            result.is_correct ?
+                                System.Drawing.Color.FromArgb(46, 204, 113) :
+                                System.Drawing.Color.FromArgb(52, 73, 94)
+                        );
+                    answerLabel.TextFrame.TextRange.ParagraphFormat.Alignment =
+                        PowerPoint.PpParagraphAlignment.ppAlignCenter;
+
+                    // Add checkmark for correct answer
+                    if (result.is_correct)
+                    {
+                        var checkmark = slide.Shapes.AddTextbox(
+                            Office.MsoTextOrientation.msoTextOrientationHorizontal,
+                            x, chartStartY + barAreaHeight + slideHeight * 0.055f, barWidth * 0.85f, slideHeight * 0.035f
+                        );
+                        checkmark.TextFrame.TextRange.Text = "✓";
+                        checkmark.TextFrame.TextRange.Font.Size = (int)(slideHeight * 0.025f);
+                        checkmark.TextFrame.TextRange.Font.Bold = Office.MsoTriState.msoTrue;
+                        checkmark.TextFrame.TextRange.Font.Color.RGB =
+                            System.Drawing.ColorTranslator.ToOle(System.Drawing.Color.FromArgb(46, 204, 113));
+                        checkmark.TextFrame.TextRange.ParagraphFormat.Alignment =
+                            PowerPoint.PpParagraphAlignment.ppAlignCenter;
+                    }
+
+                    x += barWidth + spacing;
+                }
+
+                // Add legend at the bottom with dynamic sizing
+                float legendStartY = chartStartY + barAreaHeight + slideHeight * 0.11f;
+
+                // Calculate available space and item height to fit all results
+                float availableHeight = slideHeight - legendStartY - marginY;
+                float legendItemHeight = Math.Min(slideHeight * 0.045f, availableHeight / results.Count);
+
+                // If items would be too small, make them readable minimum size
+                if (legendItemHeight < slideHeight * 0.035f)
+                {
+                    legendItemHeight = slideHeight * 0.035f;
+                }
+
+                foreach (var result in results)
+                {
+                    // Color indicator
+                    var colorBox = slide.Shapes.AddShape(
+                        Office.MsoAutoShapeType.msoShapeRectangle,
+                        marginX, legendStartY + slideHeight * 0.006f, slideHeight * 0.025f, slideHeight * 0.025f
+                    );
+                    colorBox.Fill.ForeColor.RGB = System.Drawing.ColorTranslator.ToOle(
+                        result.is_correct ?
+                            System.Drawing.Color.FromArgb(46, 204, 113) :
+                            System.Drawing.Color.FromArgb(52, 152, 219)
+                    );
+                    colorBox.Fill.Solid();
+                    colorBox.Line.Visible = Office.MsoTriState.msoFalse;
+
+                    // Answer text - truncate if too long
+                    string answerDisplayText = result.answer_text;
+                    int maxLength = (int)(slideWidth / 7); // Approximate character limit based on slide width
+                    if (answerDisplayText.Length > maxLength)
+                    {
+                        answerDisplayText = answerDisplayText.Substring(0, maxLength - 3) + "...";
+                    }
+
+                    var answerText = slide.Shapes.AddTextbox(
+                        Office.MsoTextOrientation.msoTextOrientationHorizontal,
+                        marginX + slideHeight * 0.040f, legendStartY, contentWidth * 0.65f, legendItemHeight
+                    );
+                    answerText.TextFrame.TextRange.Text =
+                        $"{(char)('A' + result.answer_order)}. {answerDisplayText}";
+                    answerText.TextFrame.TextRange.Font.Size = (int)(slideHeight * 0.018f);
+                    answerText.TextFrame.TextRange.Font.Bold = result.is_correct ?
+                        Office.MsoTriState.msoTrue : Office.MsoTriState.msoFalse;
+                    answerText.TextFrame.TextRange.Font.Color.RGB =
+                        System.Drawing.ColorTranslator.ToOle(
+                            result.is_correct ?
+                                System.Drawing.Color.FromArgb(46, 204, 113) :
+                                System.Drawing.Color.FromArgb(52, 73, 94)
+                        );
+                    answerText.TextFrame.WordWrap = Office.MsoTriState.msoFalse;
+
+                    // Percentage and count
+                    var statsText = slide.Shapes.AddTextbox(
+                        Office.MsoTextOrientation.msoTextOrientationHorizontal,
+                        marginX + contentWidth * 0.70f, legendStartY, contentWidth * 0.25f, legendItemHeight
+                    );
+                    statsText.TextFrame.TextRange.Text = $"{result.percentage:F1}% ({result.count})";
+                    statsText.TextFrame.TextRange.Font.Size = (int)(slideHeight * 0.016f);
+                    statsText.TextFrame.TextRange.Font.Bold = Office.MsoTriState.msoTrue;
+                    statsText.TextFrame.TextRange.Font.Color.RGB =
+                        System.Drawing.ColorTranslator.ToOle(System.Drawing.Color.FromArgb(127, 140, 141));
+                    statsText.TextFrame.TextRange.ParagraphFormat.Alignment =
+                        PowerPoint.PpParagraphAlignment.ppAlignRight;
+
+                    legendStartY += legendItemHeight;
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error inserting results: {ex.Message}\n\n{ex.StackTrace}",
+                    "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
+            }
+        }
     }
 }

@@ -16,7 +16,7 @@ namespace ClassPointQuiz
 
             // Form setup
             this.Text = "My Quizzes";
-            this.Size = new Size(700, 600);
+            this.Size = new Size(700, 650);
             this.StartPosition = FormStartPosition.CenterScreen;
             this.FormBorderStyle = FormBorderStyle.FixedDialog;
             this.MaximizeBox = false;
@@ -242,6 +242,24 @@ namespace ClassPointQuiz
                 btn.Enabled = true;
                 btn.Text = "Run Quiz";
             }
+        }
+
+        private void InitializeComponent()
+        {
+            this.SuspendLayout();
+            // 
+            // QuizListForm
+            // 
+            this.ClientSize = new System.Drawing.Size(282, 253);
+            this.Name = "QuizListForm";
+            this.Load += new System.EventHandler(this.QuizListForm_Load);
+            this.ResumeLayout(false);
+
+        }
+
+        private void QuizListForm_Load(object sender, EventArgs e)
+        {
+
         }
     }
 }

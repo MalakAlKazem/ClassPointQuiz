@@ -46,7 +46,12 @@ namespace ClassPointQuiz
         private Button btnViewResponses;
         private int selectedChoices = 4;
 
+        private Process streamlitProcess = null;
+        private Process backendProcess = null;
+
         private static readonly string STREAMLIT_URL = ConfigurationManager.AppSettings["StreamlitUrl"] ?? "http://localhost:8501";
+        private static readonly string STREAMLIT_APP_PATH = ConfigurationManager.AppSettings["StreamlitAppPath"];
+        private static readonly string BACKEND_APP_PATH = ConfigurationManager.AppSettings["BackendAppPath"];
 
         // Get login file path from user's home directory
         private static string GetLoginFilePath()
@@ -265,127 +270,128 @@ namespace ClassPointQuiz
             quizPanel.Controls.Add(lblTitle);
             y += 45;
 
-            // Number of choices label
-            lblChoicesLabel = new Label
-            {
-                Text = "Number of choices",
-                Location = new Point(20, y),
-                Width = 360,
-                Height = 25,
-                Font = new Font("Segoe UI", 11),
-                ForeColor = Color.FromArgb(52, 73, 94)
-            };
-            quizPanel.Controls.Add(lblChoicesLabel);
-            y += 30;
+            //// Number of choices label
+            //lblChoicesLabel = new Label
+            //{
+            //    Text = "Number of choices",
+            //    Location = new Point(20, y),
+            //    Width = 360,
+            //    Height = 25,
+            //    Font = new Font("Segoe UI", 11),
+            //    ForeColor = Color.FromArgb(52, 73, 94)
+            //};
+            //quizPanel.Controls.Add(lblChoicesLabel);
+            //y += 30;
 
-            // Choice buttons (2-8)
-            choicesPanel = new FlowLayoutPanel
-            {
-                Location = new Point(20, y),
-                Width = 360,
-                Height = 60,
-                FlowDirection = FlowDirection.LeftToRight,
-                WrapContents = true
-            };
+            //// Choice buttons (2-8)
+            //choicesPanel = new FlowLayoutPanel
+            //{
+            //    Location = new Point(20, y),
+            //    Width = 360,
+            //    Height = 60,
+            //    FlowDirection = FlowDirection.LeftToRight,
+            //    WrapContents = true
+            //};
 
-            for (int i = 2; i <= 8; i++)
-            {
-                var btn = new Button
-                {
-                    Text = i.ToString(),
-                    Width = 45,
-                    Height = 45,
-                    Font = new Font("Segoe UI", 12),
-                    FlatStyle = FlatStyle.Flat,
-                    Cursor = Cursors.Hand,
-                    Tag = i,
-                    Margin = new Padding(2)
-                };
+            //for (int i = 2; i <= 8; i++)
+            //{
+            //    var btn = new Button
+            //    {
+            //        Text = i.ToString(),
+            //        Width = 45,
+            //        Height = 45,
+            //        Font = new Font("Segoe UI", 12),
+            //        FlatStyle = FlatStyle.Flat,
+            //        Cursor = Cursors.Hand,
+            //        Tag = i,
+            //        Margin = new Padding(2)
+            //    };
 
-                if (i == 4)
-                {
-                    btn.BackColor = Color.FromArgb(52, 152, 219);
-                    btn.ForeColor = Color.White;
-                }
-                else
-                {
-                    btn.BackColor = Color.FromArgb(236, 240, 241);
-                    btn.ForeColor = Color.FromArgb(52, 73, 94);
-                }
+            //    if (i == 4)
+            //    {
+            //        btn.BackColor = Color.FromArgb(52, 152, 219);
+            //        btn.ForeColor = Color.White;
+            //    }
+            //    else
+            //    {
+            //        btn.BackColor = Color.FromArgb(236, 240, 241);
+            //        btn.ForeColor = Color.FromArgb(52, 73, 94);
+            //    }
 
-                btn.FlatAppearance.BorderSize = 0;
-                btn.Click += ChoiceButton_Click;
-                choicesPanel.Controls.Add(btn);
-            }
+            //    btn.FlatAppearance.BorderSize = 0;
+            //    btn.Click += ChoiceButton_Click;
+            //    choicesPanel.Controls.Add(btn);
+            //}
 
-            quizPanel.Controls.Add(choicesPanel);
-            y += 70;
+            //quizPanel.Controls.Add(choicesPanel);
+            //y += 70;
 
-            // Allow selecting multiple choices
-            chkMultiple = new CheckBox
-            {
-                Text = "Allow selecting multiple choices",
-                Location = new Point(20, y),
-                Width = 360,
-                Height = 25,
-                Font = new Font("Segoe UI", 10),
-                ForeColor = Color.FromArgb(52, 73, 94)
-            };
-            quizPanel.Controls.Add(chkMultiple);
-            y += 35;
+            //// Allow selecting multiple choices
+            //chkMultiple = new CheckBox
+            //{
+            //    Text = "Allow selecting multiple choices",
+            //    Location = new Point(20, y),
+            //    Width = 360,
+            //    Height = 25,
+            //    Font = new Font("Segoe UI", 10),
+            //    ForeColor = Color.FromArgb(52, 73, 94)
+            //};
+            //quizPanel.Controls.Add(chkMultiple);
+            //y += 35;
 
-            // Has correct answer
-            chkHasCorrect = new CheckBox
-            {
-                Text = "Has correct answer(s)",
-                Location = new Point(20, y),
-                Width = 200,
-                Height = 25,
-                Font = new Font("Segoe UI", 10),
-                ForeColor = Color.FromArgb(52, 73, 94),
-                Checked = true
-            };
-            chkHasCorrect.CheckedChanged += ChkHasCorrect_CheckedChanged;
-            quizPanel.Controls.Add(chkHasCorrect);
+            //// Has correct answer
+            //chkHasCorrect = new CheckBox
+            //{
+            //    Text = "Has correct answer(s)",
+            //    Location = new Point(20, y),
+            //    Width = 200,
+            //    Height = 25,
+            //    Font = new Font("Segoe UI", 10),
+            //    ForeColor = Color.FromArgb(52, 73, 94),
+            //    Checked = true
+            //};
+            //chkHasCorrect.CheckedChanged += ChkHasCorrect_CheckedChanged;
+            //quizPanel.Controls.Add(chkHasCorrect);
+            //y += 40;
 
-            // Correct answer dropdown
-            cmbCorrectAnswer = new ComboBox
-            {
-                Location = new Point(230, y - 5),
-                Width = 150,
-                Height = 30,
-                DropDownStyle = ComboBoxStyle.DropDownList,
-                Font = new Font("Segoe UI", 10)
-            };
-            UpdateCorrectAnswerDropdown();
-            quizPanel.Controls.Add(cmbCorrectAnswer);
-            y += 40;
+            //// Correct answer dropdown
+            //cmbCorrectAnswer = new ComboBox
+            //{
+            //    Location = new Point(230, y - 5),
+            //    Width = 150,
+            //    Height = 30,
+            //    DropDownStyle = ComboBoxStyle.DropDownList,
+            //    Font = new Font("Segoe UI", 10)
+            //};
+            //UpdateCorrectAnswerDropdown();
+            //quizPanel.Controls.Add(cmbCorrectAnswer);
+            //y += 40;
 
-            // Quiz mode
-            chkQuizMode = new CheckBox
-            {
-                Text = "Quiz mode",
-                Location = new Point(20, y),
-                Width = 120,
-                Height = 25,
-                Font = new Font("Segoe UI", 10),
-                ForeColor = Color.FromArgb(52, 73, 94),
-                Checked = true
-            };
-            quizPanel.Controls.Add(chkQuizMode);
+            //// Quiz mode
+            //chkQuizMode = new CheckBox
+            //{
+            //    Text = "Quiz mode",
+            //    Location = new Point(20, y),
+            //    Width = 120,
+            //    Height = 25,
+            //    Font = new Font("Segoe UI", 10),
+            //    ForeColor = Color.FromArgb(52, 73, 94),
+            //    Checked = true
+            //};
+            //quizPanel.Controls.Add(chkQuizMode);
 
-            // Quiz mode label
-            lblQuizModeLabel = new Label
-            {
-                Text = "(Easy)",
-                Location = new Point(145, y),
-                Width = 100,
-                Height = 25,
-                Font = new Font("Segoe UI", 10),
-                ForeColor = Color.FromArgb(241, 196, 15)
-            };
-            quizPanel.Controls.Add(lblQuizModeLabel);
-            y += 45;
+            //// Quiz mode label
+            //lblQuizModeLabel = new Label
+            //{
+            //    Text = "(Easy)",
+            //    Location = new Point(145, y),
+            //    Width = 100,
+            //    Height = 25,
+            //    Font = new Font("Segoe UI", 10),
+            //    ForeColor = Color.FromArgb(241, 196, 15)
+            //};
+            //quizPanel.Controls.Add(lblQuizModeLabel);
+            //y += 45;
 
             // Selected Quiz Info (shown when a quiz is selected on the slide)
             lblSelectedQuiz = new Label
@@ -493,6 +499,19 @@ namespace ClassPointQuiz
                 "1 minute", "2 minutes", "3 minutes", "5 minutes", "10 minutes"
             });
             cmbAutoCloseTime.SelectedIndex = 0;
+            cmbAutoCloseTime.SelectedIndexChanged += (s, e) =>
+            {
+                int minutes = GetSelectedAutoCloseMinutes();
+                if (!chkAutoClose.Checked)
+                {
+                    ThisAddIn.AutoCloseMinutes = 0;
+                }
+                else
+                {
+                    ThisAddIn.AutoCloseMinutes = minutes;
+                }
+                System.Diagnostics.Debug.WriteLine($"[QuizPanel] Auto-close dropdown changed -> {ThisAddIn.AutoCloseMinutes} minute(s)");
+            };
             settingsPanel.Controls.Add(cmbAutoCloseTime);
             settingsY += 50;
 
@@ -536,11 +555,13 @@ namespace ClassPointQuiz
             y += 70;
 
             // Presentation Mode Panel (only visible when quiz is selected on slide)
+            // Presentation Mode Panel (only visible when quiz is selected on slide)
             presentationModePanel = new Panel
             {
                 Location = new Point(0, y),
                 Width = 400,
-                Height = 240,
+                AutoSize = true,           // ← Auto-size based on content
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,  // ← Grow/shrink as needed
                 BackColor = Color.White,
                 Visible = false
             };
@@ -582,7 +603,7 @@ namespace ClassPointQuiz
                 ForeColor = Color.Gray
             };
             presentationModePanel.Controls.Add(lblPresentationHelp);
-            presentationY += 30;
+            presentationY += 100;
 
             // Start Quiz Button (for presentation)
             var btnStartQuizPresentation = new Button
@@ -729,7 +750,24 @@ namespace ClassPointQuiz
         {
             try
             {
-                // Open Streamlit website in browser
+                // ✅ Start Python backend if needed
+                if (!IsBackendRunning())
+                {
+                    StartBackendServer();
+                    System.Threading.Thread.Sleep(2000); // Wait for backend
+                }
+
+                // ✅ Start Streamlit if using localhost
+                if (STREAMLIT_URL.Contains("localhost"))
+                {
+                    if (!IsStreamlitRunning())
+                    {
+                        StartStreamlitServer();
+                        System.Threading.Thread.Sleep(3000); // Wait for Streamlit
+                    }
+                }
+
+                // Open browser
                 Process.Start(new ProcessStartInfo
                 {
                     FileName = STREAMLIT_URL,
@@ -739,7 +777,7 @@ namespace ClassPointQuiz
                 MessageBox.Show(
                     "Opening login page...\n\n" +
                     "Please login in your web browser.\n" +
-                    "After login, close the browser and return to PowerPoint.\n\n" +
+                    "After login, return to PowerPoint.\n\n" +
                     "This sidebar will automatically update!",
                     "Login",
                     MessageBoxButtons.OK,
@@ -748,11 +786,176 @@ namespace ClassPointQuiz
             catch (Exception ex)
             {
                 MessageBox.Show(
-                    $"Error opening browser: {ex.Message}\n\n" +
-                    "Please manually open: {STREAMLIT_URL}",
+                    $"Error: {ex.Message}\n\n" +
+                    $"Please manually open: {STREAMLIT_URL}",
                     "Error",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error);
+            }
+        }
+
+        // ✅ Check if backend is running
+        private bool IsBackendRunning()
+        {
+            try
+            {
+                var client = new System.Net.Sockets.TcpClient();
+                var result = client.BeginConnect("localhost", 8000, null, null);
+                var success = result.AsyncWaitHandle.WaitOne(TimeSpan.FromMilliseconds(500));
+                client.Close();
+                return success;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        // ✅ Check if Streamlit is running
+        private bool IsStreamlitRunning()
+        {
+            try
+            {
+                var client = new System.Net.Sockets.TcpClient();
+                var result = client.BeginConnect("localhost", 8501, null, null);
+                var success = result.AsyncWaitHandle.WaitOne(TimeSpan.FromMilliseconds(500));
+                client.Close();
+                return success;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        // ✅ Start Python backend
+        private void StartBackendServer()
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(BACKEND_APP_PATH) || !File.Exists(BACKEND_APP_PATH))
+                {
+                    Debug.WriteLine("⚠️ Backend app not found");
+                    return;
+                }
+
+                Debug.WriteLine($"🚀 Starting backend: {BACKEND_APP_PATH}");
+
+                backendProcess = new Process
+                {
+                    StartInfo = new ProcessStartInfo
+                    {
+                        FileName = "python",
+                        Arguments = $"\"{BACKEND_APP_PATH}\"",
+                        UseShellExecute = false,
+                        CreateNoWindow = true,
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                        WorkingDirectory = Path.GetDirectoryName(BACKEND_APP_PATH)
+                    }
+                };
+
+                backendProcess.OutputDataReceived += (s, e) =>
+                {
+                    if (!string.IsNullOrEmpty(e.Data))
+                        Debug.WriteLine($"[Backend] {e.Data}");
+                };
+
+                backendProcess.ErrorDataReceived += (s, e) =>
+                {
+                    if (!string.IsNullOrEmpty(e.Data))
+                        Debug.WriteLine($"[Backend Error] {e.Data}");
+                };
+
+                backendProcess.Start();
+                backendProcess.BeginOutputReadLine();
+                backendProcess.BeginErrorReadLine();
+
+                Debug.WriteLine("✅ Backend server started");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"❌ Error starting backend: {ex.Message}");
+                MessageBox.Show(
+                    $"Failed to start backend:\n{ex.Message}\n\n" +
+                    "Make sure Python is installed and in PATH.",
+                    "Backend Error",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+            }
+        }
+
+        // ✅ Start Streamlit server
+        private void StartStreamlitServer()
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(STREAMLIT_APP_PATH))
+                {
+                    Debug.WriteLine("⚠️ StreamlitAppPath not configured");
+                    MessageBox.Show(
+                        "Streamlit app path not configured.\n\n" +
+                        "Please add 'StreamlitAppPath' to app.config",
+                        "Configuration Error",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning);
+                    return;
+                }
+
+                if (!File.Exists(STREAMLIT_APP_PATH))
+                {
+                    Debug.WriteLine($"⚠️ Streamlit app not found at: {STREAMLIT_APP_PATH}");
+                    MessageBox.Show(
+                        $"Streamlit app not found at:\n{STREAMLIT_APP_PATH}",
+                        "File Not Found",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning);
+                    return;
+                }
+
+                Debug.WriteLine($"🚀 Starting Streamlit: {STREAMLIT_APP_PATH}");
+
+                streamlitProcess = new Process
+                {
+                    StartInfo = new ProcessStartInfo
+                    {
+                        FileName = "streamlit",
+                        Arguments = $"run \"{STREAMLIT_APP_PATH}\" --server.port 8501 --server.headless true",
+                        UseShellExecute = false,
+                        CreateNoWindow = true,
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                        WorkingDirectory = Path.GetDirectoryName(STREAMLIT_APP_PATH)
+                    }
+                };
+
+                streamlitProcess.OutputDataReceived += (s, e) =>
+                {
+                    if (!string.IsNullOrEmpty(e.Data))
+                        Debug.WriteLine($"[Streamlit] {e.Data}");
+                };
+
+                streamlitProcess.ErrorDataReceived += (s, e) =>
+                {
+                    if (!string.IsNullOrEmpty(e.Data))
+                        Debug.WriteLine($"[Streamlit Error] {e.Data}");
+                };
+
+                streamlitProcess.Start();
+                streamlitProcess.BeginOutputReadLine();
+                streamlitProcess.BeginErrorReadLine();
+
+                Debug.WriteLine("✅ Streamlit server started");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"❌ Error starting Streamlit: {ex.Message}");
+                MessageBox.Show(
+                    $"Failed to start Streamlit:\n{ex.Message}\n\n" +
+                    "Make sure Streamlit is installed:\npip install streamlit",
+                    "Streamlit Error",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
             }
         }
 
@@ -794,65 +997,22 @@ namespace ClassPointQuiz
             }
         }
 
-        private void ChoiceButton_Click(object sender, EventArgs e)
-        {
-            var clickedBtn = (Button)sender;
-            selectedChoices = (int)clickedBtn.Tag;
-
-            foreach (Control ctrl in choicesPanel.Controls)
-            {
-                if (ctrl is Button btn)
-                {
-                    if ((int)btn.Tag == selectedChoices)
-                    {
-                        btn.BackColor = Color.FromArgb(52, 152, 219);
-                        btn.ForeColor = Color.White;
-                    }
-                    else
-                    {
-                        btn.BackColor = Color.FromArgb(236, 240, 241);
-                        btn.ForeColor = Color.FromArgb(52, 73, 94);
-                    }
-                }
-            }
-
-            UpdateCorrectAnswerDropdown();
-        }
-
-        private void UpdateCorrectAnswerDropdown()
-        {
-            cmbCorrectAnswer.Items.Clear();
-            for (int i = 0; i < selectedChoices; i++)
-            {
-                cmbCorrectAnswer.Items.Add(((char)('A' + i)).ToString());
-            }
-            if (cmbCorrectAnswer.Items.Count > 1)
-            {
-                cmbCorrectAnswer.SelectedIndex = 1;
-            }
-        }
-
-        private void ChkHasCorrect_CheckedChanged(object sender, EventArgs e)
-        {
-            cmbCorrectAnswer.Enabled = chkHasCorrect.Checked;
-        }
-
         private async void BtnCreateQuiz_Click(object sender, EventArgs e)
         {
             try
             {
-                // ✅ FIX: Get ALL UI values FIRST (before any await)
-                int numChoices = selectedChoices;
-                bool allowMultiple = chkMultiple.Checked;
-                bool hasCorrect = chkHasCorrect.Checked;
-                int correctIndex = cmbCorrectAnswer.SelectedIndex;
-                bool isQuizMode = chkQuizMode.Checked;
-                bool startWithSlide = chkStartWithSlide.Checked;
-                bool minimizeWindow = chkMinimizeWindow.Checked;
+                // ✅ SAFE DEFAULTS - Using fallback values since UI controls are commented out
+                int numChoices = selectedChoices; // Default: 4
+                bool allowMultiple = false;
+                bool hasCorrect = true;
+                int correctIndex = 1;
+                bool isQuizMode = true;
+                bool startWithSlide = chkStartWithSlide?.Checked ?? false;
+                bool minimizeWindow = chkMinimizeWindow?.Checked ?? false;
 
                 // Parse auto-close minutes from selected text (e.g., "5 minutes" -> 5)
                 int autoCloseMinutes = 1; // Default
-                if (cmbAutoCloseTime.SelectedItem != null)
+                if (cmbAutoCloseTime?.SelectedItem != null)
                 {
                     string selectedText = cmbAutoCloseTime.SelectedItem.ToString();
                     string[] parts = selectedText.Split(' ');
@@ -893,6 +1053,7 @@ namespace ClassPointQuiz
 
                 if (configForm.ShowDialog() == DialogResult.OK)
                 {
+                    // ✅ FIX: Use values from configForm AFTER user made selections
                     // Create quiz via API - use values from configForm as user may have modified them
                     var quizRequest = new ApiClient.QuizCreateRequest
                     {
@@ -901,32 +1062,45 @@ namespace ClassPointQuiz
                             ? configForm.QuestionText.Substring(0, 50) + "..."
                             : configForm.QuestionText,
                         question_text = configForm.QuestionText,
-                        num_choices = numChoices,
-                        allow_multiple = allowMultiple,
-                        has_correct = hasCorrect,
-                        quiz_mode = isQuizMode ? "easy" : "normal",
-                        start_with_slide = startWithSlide,
-                        minimize_window = minimizeWindow,
-                        auto_close_minutes = configForm.AutoCloseMinutes // Use the value from the form
+                        num_choices = configForm.NumChoices,  // ✅ FIXED: Use configForm.NumChoices instead of numChoices
+                        allow_multiple = configForm.AllowMultiple,  // ✅ FIXED: Use configForm.AllowMultiple
+                        has_correct = configForm.HasCorrect,  // ✅ FIXED: Use configForm.HasCorrect
+                        quiz_mode = configForm.QuizMode,  // ✅ FIXED: Use configForm.QuizMode directly
+                        start_with_slide = configForm.StartWithSlide,  // ✅ FIXED: Use configForm.StartWithSlide
+                        minimize_window = configForm.MinimizeWindow,  // ✅ FIXED: Use configForm.MinimizeWindow
+                        auto_close_minutes = configForm.AutoCloseMinutes
                     };
 
                     var answers = new List<ApiClient.Answer>();
                     for (int i = 0; i < configForm.Answers.Count; i++)
                     {
+                        // Check if this answer index is in the CorrectAnswerIndices list
+                        bool isCorrect = configForm.CorrectAnswerIndices.Contains(i);
+
                         answers.Add(new ApiClient.Answer
                         {
                             text = configForm.Answers[i],
                             order = i,
-                            is_correct = i == configForm.CorrectAnswerIndex
+                            is_correct = isCorrect
                         });
+                        
+                        // Debug output
+                        System.Diagnostics.Debug.WriteLine($"Answer {(char)('A' + i)}: {configForm.Answers[i]} - Correct: {isCorrect}");
                     }
+                    
+                    // Debug: Show quiz details
+                    System.Diagnostics.Debug.WriteLine($"Creating quiz with {configForm.NumChoices} choices");
+                    System.Diagnostics.Debug.WriteLine($"Allow Multiple: {configForm.AllowMultiple}");
+                    System.Diagnostics.Debug.WriteLine($"Correct answers: {string.Join(", ", configForm.CorrectAnswerIndices)}");
 
                     var result = await ApiClient.CreateQuizAsync(quizRequest, answers);
 
                     MessageBox.Show(
                         $"Quiz Created Successfully!\n\n" +
                         $"Quiz ID: {result.quiz_id}\n" +
-                        $"Question: {configForm.QuestionText}\n\n" +
+                        $"Question: {configForm.QuestionText}\n" +
+                        $"Choices: {configForm.NumChoices}\n" +
+                        $"Correct Answers: {configForm.CorrectAnswerIndices.Count}\n\n" +
                         $"Click 'View My Quizzes' to see it and run it.",
                         "Success",
                         MessageBoxButtons.OK,
@@ -985,31 +1159,75 @@ namespace ClassPointQuiz
         {
             try
             {
-                // Get current slide's quiz ID
+                // Get quiz ID
                 int quizId = GetCurrentSlideQuizId();
 
                 if (quizId == 0)
                 {
                     MessageBox.Show(
                         "No quiz found on current slide!\n\n" +
-                        "Please navigate to a slide with a quiz button,\n" +
-                        "or create a new quiz first.",
+                        "Please navigate to a slide with a quiz button.",
                         "No Quiz",
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Warning);
                     return;
                 }
 
-                // Start the quiz session
-                ThisAddIn.CurrentQuizId = quizId;
-                var session = await ApiClient.StartSessionAsync(quizId);
+                // ✅ GET TIMER VALUE FROM DROPDOWN
+                int autoCloseMinutes = 5; // Default
+                if (cmbAutoCloseTime.SelectedItem != null)
+                {
+                    string selectedText = cmbAutoCloseTime.SelectedItem.ToString();
+                    string[] parts = selectedText.Split(' ');
+                    if (parts.Length > 0 && int.TryParse(parts[0], out int parsedMinutes))
+                    {
+                        autoCloseMinutes = parsedMinutes;
+                    }
+                }
 
+                System.Diagnostics.Debug.WriteLine($"⏱️ Timer: {autoCloseMinutes} minutes");
+
+                // Store quiz ID
+                ThisAddIn.CurrentQuizId = quizId;
+
+                // ✅ START SESSION WITH TIMER OVERRIDE
+                var session = await ApiClient.StartSessionAsync(quizId, autoCloseMinutes);
+
+                // Store session info
                 ThisAddIn.CurrentSessionId = session.session_id;
                 ThisAddIn.CurrentClassCode = session.class_code;
+                ThisAddIn.AutoCloseMinutes = autoCloseMinutes;
 
+                // ✅ Get the ACTUAL start time from database
+                try
+                {
+                    var sessionInfo = await ApiClient.GetSessionInfoAsync(session.session_id);
+                    if (sessionInfo != null && sessionInfo.started_at != DateTime.MinValue)
+                    {
+                        ThisAddIn.CurrentSessionStartTime = sessionInfo.started_at.Kind == DateTimeKind.Utc
+                            ? sessionInfo.started_at.ToLocalTime()
+                            : sessionInfo.started_at;
+
+                        System.Diagnostics.Debug.WriteLine($"✅ Session created at: {ThisAddIn.CurrentSessionStartTime}");
+                        System.Diagnostics.Debug.WriteLine($"✅ Current time: {DateTime.Now}");
+                        System.Diagnostics.Debug.WriteLine($"✅ Difference: {(DateTime.Now - ThisAddIn.CurrentSessionStartTime).TotalSeconds:F2} seconds");
+                    }
+                    else
+                    {
+                        // Fallback
+                        ThisAddIn.CurrentSessionStartTime = DateTime.Now;
+                        System.Diagnostics.Debug.WriteLine("⚠️ Using fallback time");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"⚠️ Error getting session start time: {ex.Message}");
+                    ThisAddIn.CurrentSessionStartTime = DateTime.Now;
+                }
                 MessageBox.Show(
-                    $"Quiz Started!\n\n" +
-                    $"CLASS CODE: {session.class_code}\n\n" +
+                    $"✅ Quiz Started!\n\n" +
+                    $"📱 CLASS CODE: {session.class_code}\n\n" +
+                    $"⏱️ Auto-close: {autoCloseMinutes} minute(s)\n\n" +
                     $"Students join at:\n" +
                     $"https://quizapp-joinclass.streamlit.app\n\n" +
                     $"Click 'View Results' to see live responses!",
@@ -1019,8 +1237,8 @@ namespace ClassPointQuiz
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error starting quiz: {ex.Message}",
-                    "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"Error starting quiz: {ex.Message}", "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -1039,10 +1257,13 @@ namespace ClassPointQuiz
                     return;
                 }
 
+                bool shouldMinimize = chkMinimizeWindow.Checked;
+
                 var dialog = new LiveResultsDialog(
                     ThisAddIn.CurrentSessionId,
                     ThisAddIn.CurrentClassCode,
-                    ThisAddIn.AutoCloseMinutes
+                    ThisAddIn.AutoCloseMinutes,
+                    shouldMinimize  // ← ADD THIS PARAMETER
                 );
                 dialog.ShowDialog();
             }
@@ -1169,7 +1390,7 @@ namespace ClassPointQuiz
             }
         }
 
-        private void UpdateQuizSettingsUI(ApiClient.QuizDetails quizDetails)
+        private async void UpdateQuizSettingsUI(ApiClient.QuizDetails quizDetails)
         {
             try
             {
@@ -1184,62 +1405,67 @@ namespace ClassPointQuiz
 
                 // Update number of choices
                 selectedChoices = quizDetails.quiz.num_choices;
-                foreach (Control ctrl in choicesPanel.Controls)
-                {
-                    if (ctrl is Button btn)
-                    {
-                        if ((int)btn.Tag == selectedChoices)
-                        {
-                            btn.BackColor = Color.FromArgb(52, 152, 219);
-                            btn.ForeColor = Color.White;
-                        }
-                        else
-                        {
-                            btn.BackColor = Color.FromArgb(236, 240, 241);
-                            btn.ForeColor = Color.FromArgb(52, 73, 94);
-                        }
-                    }
-                }
 
-                // Update allow multiple
-                chkMultiple.Checked = quizDetails.quiz.allow_multiple;
+                // ✅ COMMENTED OUT - choicesPanel is not initialized
+                //foreach (Control ctrl in choicesPanel.Controls)
+                //{
+                //    if (ctrl is Button btn)
+                //    {
+                //        if ((int)btn.Tag == selectedChoices)
+                //        {
+                //            btn.BackColor = Color.FromArgb(52, 152, 219);
+                //            btn.ForeColor = Color.White;
+                //        }
+                //        else
+                //        {
+                //            btn.BackColor = Color.FromArgb(236, 240, 241);
+                //            btn.ForeColor = Color.FromArgb(52, 73, 94);
+                //        }
+                //    }
+                //}
 
-                // Update has correct answer
-                chkHasCorrect.Checked = quizDetails.quiz.has_correct;
+                // ✅ COMMENTED OUT - chkMultiple is not initialized
+                //chkMultiple.Checked = quizDetails.quiz.allow_multiple;
 
-                // Update correct answer dropdown
-                UpdateCorrectAnswerDropdown();
-                if (quizDetails.answers != null && quizDetails.answers.Count > 0)
-                {
-                    for (int i = 0; i < quizDetails.answers.Count; i++)
-                    {
-                        if (quizDetails.answers[i].is_correct && i < cmbCorrectAnswer.Items.Count)
-                        {
-                            cmbCorrectAnswer.SelectedIndex = i;
-                            break;
-                        }
-                    }
-                }
+                // ✅ COMMENTED OUT - chkHasCorrect is not initialized
+                //chkHasCorrect.Checked = quizDetails.quiz.has_correct;
 
-                // Update quiz mode (competition_mode)
-                chkQuizMode.Checked = quizDetails.quiz.competition_mode;
+                // ✅ COMMENTED OUT - cmbCorrectAnswer is not initialized
+                //UpdateCorrectAnswerDropdown();
+                //if (quizDetails.answers != null && quizDetails.answers.Count > 0)
+                //{
+                //    for (int i = 0; i < quizDetails.answers.Count; i++)
+                //    {
+                //        if (quizDetails.answers[i].is_correct && i < cmbCorrectAnswer.Items.Count)
+                //        {
+                //            cmbCorrectAnswer.SelectedIndex = i;
+                //            break;
+                //        }
+                //    }
+                //}
+
+                // ✅ COMMENTED OUT - chkQuizMode is not initialized
+                //chkQuizMode.Checked = quizDetails.quiz.competition_mode;
 
                 // Update auto-close settings
                 if (quizDetails.quiz.close_submission_after > 0)
                 {
-                    chkAutoClose.Checked = true;
+                    if (chkAutoClose != null) chkAutoClose.Checked = true;
                     int autoCloseMinutes = quizDetails.quiz.close_submission_after;
 
                     // Find matching item in dropdown
                     string searchText = $"{autoCloseMinutes} minute";
                     if (autoCloseMinutes > 1) searchText += "s";
 
-                    for (int i = 0; i < cmbAutoCloseTime.Items.Count; i++)
+                    if (cmbAutoCloseTime != null)
                     {
-                        if (cmbAutoCloseTime.Items[i].ToString() == searchText)
+                        for (int i = 0; i < cmbAutoCloseTime.Items.Count; i++)
                         {
-                            cmbAutoCloseTime.SelectedIndex = i;
-                            break;
+                            if (cmbAutoCloseTime.Items[i].ToString() == searchText)
+                            {
+                                cmbAutoCloseTime.SelectedIndex = i;
+                                break;
+                            }
                         }
                     }
 
@@ -1248,7 +1474,7 @@ namespace ClassPointQuiz
                 }
                 else
                 {
-                    chkAutoClose.Checked = false;
+                    if (chkAutoClose != null) chkAutoClose.Checked = false;
                 }
 
                 // Store quiz ID in global state
@@ -1266,19 +1492,71 @@ namespace ClassPointQuiz
         {
             if (disposing)
             {
+                // Stop Streamlit
+                if (streamlitProcess != null && !streamlitProcess.HasExited)
+                {
+                    try
+                    {
+                        Debug.WriteLine("🛑 Stopping Streamlit...");
+                        streamlitProcess.Kill();
+                        streamlitProcess.Dispose();
+                    }
+                    catch { }
+                }
+
+                // Stop Backend
+                if (backendProcess != null && !backendProcess.HasExited)
+                {
+                    try
+                    {
+                        Debug.WriteLine("🛑 Stopping backend...");
+                        backendProcess.Kill();
+                        backendProcess.Dispose();
+                    }
+                    catch { }
+                }
+
                 if (loginCheckTimer != null)
                 {
                     loginCheckTimer.Stop();
                     loginCheckTimer.Dispose();
+                    loginCheckTimer = null;
                 }
 
                 if (quizCheckTimer != null)
                 {
                     quizCheckTimer.Stop();
                     quizCheckTimer.Dispose();
+                    quizCheckTimer = null;
                 }
             }
             base.Dispose(disposing);
+        }
+
+        private int GetSelectedAutoCloseMinutes()
+        {
+            if (cmbAutoCloseTime?.SelectedItem == null) return ThisAddIn.AutoCloseMinutes > 0 ? ThisAddIn.AutoCloseMinutes : 1;
+            var txt = cmbAutoCloseTime.SelectedItem.ToString(); // e.g. "5 minutes"
+            var parts = txt.Split(' ');
+            if (parts.Length > 0 && int.TryParse(parts[0], out int m)) return m;
+            return 1;
+        }
+
+        private void InitializeComponent()
+        {
+            this.SuspendLayout();
+            // 
+            // QuizPanel
+            // 
+            this.Name = "QuizPanel";
+            this.Load += new System.EventHandler(this.QuizPanel_Load);
+            this.ResumeLayout(false);
+
+        }
+
+        private void QuizPanel_Load(object sender, EventArgs e)
+        {
+
         }
     }
 }

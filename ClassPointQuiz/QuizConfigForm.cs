@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
+using System.Linq;
 
 namespace ClassPointQuiz
 {
@@ -13,17 +14,16 @@ namespace ClassPointQuiz
         public bool AllowMultiple { get; set; }
         public bool HasCorrect { get; set; }
         public int CorrectAnswerIndex { get; set; }
+        public List<int> CorrectAnswerIndices { get; set; }
         public string QuizMode { get; set; }
         public bool StartWithSlide { get; set; }
         public bool MinimizeWindow { get; set; }
         public int AutoCloseMinutes { get; set; }
-
-        // Add this property to store the answers
         public List<string> Answers { get; private set; }
 
         private TextBox txtQuestion;
         private List<TextBox> answerTextBoxes;
-        private ComboBox cmbCorrectAnswer;
+        private List<CheckBox> correctAnswerCheckboxes;
         private CheckBox chkMultiple;
         private CheckBox chkHasCorrect;
         private ComboBox cmbQuizMode;
@@ -32,12 +32,13 @@ namespace ClassPointQuiz
         private NumericUpDown numAutoClose;
         private FlowLayoutPanel choicesPanel;
         private Panel mainPanel;
+        private Panel correctAnswersPanel;
+        private Label lblCorrectAnswersHint; // ✅ NEW: Hint label
 
         public QuizConfigForm()
         {
-            // Manual UI initialization - no designer file needed
             this.Text = "Interactive Quiz";
-            this.Size = new Size(520, 750);
+            this.Size = new Size(520, 800);
             this.StartPosition = FormStartPosition.CenterScreen;
             this.FormBorderStyle = FormBorderStyle.FixedDialog;
             this.MaximizeBox = false;
@@ -45,14 +46,14 @@ namespace ClassPointQuiz
             this.BackColor = Color.White;
 
             SetupCustomUI();
-            NumChoices = 4; // Default
+            NumChoices = 4;
+            CorrectAnswerIndices = new List<int>();
         }
 
         private void SetupCustomUI()
         {
             this.BackColor = Color.White;
 
-            // Main scrollable panel
             mainPanel = new Panel
             {
                 Dock = DockStyle.Fill,
@@ -117,7 +118,7 @@ namespace ClassPointQuiz
             mainPanel.Controls.Add(choicesPanel);
             y += 60;
 
-            // Allow multiple
+            // ✅ Allow multiple - with event handler
             chkMultiple = new CheckBox
             {
                 Text = "Allow selecting multiple choices",
@@ -126,39 +127,76 @@ namespace ClassPointQuiz
                 Font = new Font("Segoe UI", 10),
                 Checked = false
             };
+            chkMultiple.CheckedChanged += ChkMultiple_CheckedChanged; // ✅ ADD EVENT HANDLER
             mainPanel.Controls.Add(chkMultiple);
             y += 35;
 
             // Has correct answer
-            var correctPanel = new FlowLayoutPanel
-            {
-                Location = new Point(20, y),
-                Width = 460,
-                Height = 35,
-                FlowDirection = FlowDirection.LeftToRight
-            };
-
             chkHasCorrect = new CheckBox
             {
                 Text = "Has correct answer(s)",
                 Checked = true,
-                Width = 180,
-                Font = new Font("Segoe UI", 10)
+                Location = new Point(20, y),
+                Width = 300,
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                ForeColor = Color.FromArgb(52, 152, 219)
             };
-            correctPanel.Controls.Add(chkHasCorrect);
-
-            cmbCorrectAnswer = new ComboBox
+            chkHasCorrect.CheckedChanged += (s, e) =>
             {
-                Width = 100,
-                DropDownStyle = ComboBoxStyle.DropDownList,
-                Font = new Font("Segoe UI", 10)
+                if (correctAnswersPanel != null)
+                {
+                    correctAnswersPanel.Visible = chkHasCorrect.Checked;
+                }
+                if (lblCorrectAnswersHint != null)
+                {
+                    lblCorrectAnswersHint.Visible = chkHasCorrect.Checked;
+                }
             };
-            cmbCorrectAnswer.Items.AddRange(new object[] { "A", "B", "C", "D" });
-            cmbCorrectAnswer.SelectedIndex = 0;
-            correctPanel.Controls.Add(cmbCorrectAnswer);
+            mainPanel.Controls.Add(chkHasCorrect);
+            y += 35;
 
-            mainPanel.Controls.Add(correctPanel);
-            y += 45;
+            // ✅ NEW: Hint label for correct answers
+            lblCorrectAnswersHint = new Label
+            {
+                Text = "Select correct answer(s):",
+                Location = new Point(40, y),
+                Width = 400,
+                Font = new Font("Segoe UI", 9, FontStyle.Italic),
+                ForeColor = Color.Gray,
+                AutoSize = true
+            };
+            mainPanel.Controls.Add(lblCorrectAnswersHint);
+            y += 25;
+
+            correctAnswersPanel = new Panel
+            {
+                Location = new Point(40, y),
+                Width = 440,
+                Height = 120,
+                BackColor = Color.FromArgb(245, 247, 250),
+                BorderStyle = BorderStyle.FixedSingle,
+                AutoScroll = true
+            };
+
+            correctAnswerCheckboxes = new List<CheckBox>();
+            for (int i = 0; i < 4; i++)
+            {
+                var chk = new CheckBox
+                {
+                    Text = $"Answer {(char)('A' + i)} is correct",
+                    Location = new Point(10, 10 + (i * 28)),
+                    Width = 400,
+                    Font = new Font("Segoe UI", 10),
+                    Tag = i,
+                    Checked = (i == 0)
+                };
+                chk.CheckedChanged += CorrectAnswerCheckBox_CheckedChanged; // ✅ ADD EVENT
+                correctAnswerCheckboxes.Add(chk);
+                correctAnswersPanel.Controls.Add(chk);
+            }
+
+            mainPanel.Controls.Add(correctAnswersPanel);
+            y += 130;
 
             // Quiz mode
             var modePanel = new FlowLayoutPanel
@@ -284,7 +322,6 @@ namespace ClassPointQuiz
                 Font = new Font("Segoe UI", 10),
                 BorderStyle = BorderStyle.FixedSingle
             };
-            // Set placeholder text differently for older .NET versions
             try
             {
                 txtQuestion.GetType().GetProperty("PlaceholderText")?.SetValue(txtQuestion, "Enter your question here...");
@@ -317,7 +354,6 @@ namespace ClassPointQuiz
                     Name = $"txtAnswer{i}"
                 };
 
-                // Set placeholder text
                 try
                 {
                     txt.GetType().GetProperty("PlaceholderText")?.SetValue(txt, $"Answer {(char)('A' + i)}");
@@ -369,12 +405,40 @@ namespace ClassPointQuiz
             this.Controls.Add(mainPanel);
         }
 
+        // ✅ NEW: Handle "Allow multiple" checkbox change
+        private void ChkMultiple_CheckedChanged(object sender, EventArgs e)
+        {
+            if (chkMultiple.Checked)
+            {
+                lblCorrectAnswersHint.Text = "✅ Multiple selection enabled - Select 2 or more correct answers:";
+                lblCorrectAnswersHint.ForeColor = Color.FromArgb(46, 204, 113);
+                lblCorrectAnswersHint.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+            }
+            else
+            {
+                lblCorrectAnswersHint.Text = "Select correct answer(s):";
+                lblCorrectAnswersHint.ForeColor = Color.Gray;
+                lblCorrectAnswersHint.Font = new Font("Segoe UI", 9, FontStyle.Italic);
+            }
+        }
+
+        // ✅ NEW: Auto-detect if multiple correct answers are selected
+        private void CorrectAnswerCheckBox_CheckedChanged(object sender, EventArgs e)
+        {
+            int checkedCount = correctAnswerCheckboxes.Count(chk => chk.Checked);
+            
+            // Auto-enable "Allow multiple" if more than 1 correct answer is selected
+            if (checkedCount >= 2 && !chkMultiple.Checked)
+            {
+                chkMultiple.Checked = true;
+            }
+        }
+
         private void ChoiceButton_Click(object sender, EventArgs e)
         {
             var btn = (Button)sender;
             int numChoices = (int)btn.Tag;
 
-            // Update button colors
             foreach (Button b in choicesPanel.Controls)
             {
                 b.BackColor = (int)b.Tag == numChoices ?
@@ -383,12 +447,11 @@ namespace ClassPointQuiz
 
             NumChoices = numChoices;
             UpdateAnswerTextBoxes(numChoices);
-            UpdateCorrectAnswerDropdown(numChoices);
+            UpdateCorrectAnswerCheckboxes(numChoices);
         }
 
         private void UpdateAnswerTextBoxes(int count)
         {
-            // Show/hide existing textboxes
             for (int i = 0; i < answerTextBoxes.Count && i < 8; i++)
             {
                 if (i < count)
@@ -401,7 +464,6 @@ namespace ClassPointQuiz
                 }
             }
 
-            // Add more if needed
             if (count > answerTextBoxes.Count)
             {
                 int startY = answerTextBoxes[answerTextBoxes.Count - 1].Location.Y + 35;
@@ -426,17 +488,63 @@ namespace ClassPointQuiz
                     answerTextBoxes.Add(txt);
                     mainPanel.Controls.Add(txt);
                 }
+                RepositionButtons();
             }
         }
 
-        private void UpdateCorrectAnswerDropdown(int count)
+        private void UpdateCorrectAnswerCheckboxes(int count)
         {
-            cmbCorrectAnswer.Items.Clear();
+            correctAnswersPanel.Controls.Clear();
+            correctAnswerCheckboxes.Clear();
+
+            correctAnswersPanel.Height = Math.Min(120, 10 + (count * 28) + 10);
+
             for (int i = 0; i < count; i++)
             {
-                cmbCorrectAnswer.Items.Add(((char)('A' + i)).ToString());
+                var chk = new CheckBox
+                {
+                    Text = $"Answer {(char)('A' + i)} is correct",
+                    Location = new Point(10, 10 + (i * 28)),
+                    Width = 400,
+                    Font = new Font("Segoe UI", 10),
+                    Tag = i,
+                    Checked = (i == 0 && chkHasCorrect.Checked)
+                };
+                chk.CheckedChanged += CorrectAnswerCheckBox_CheckedChanged; // ✅ ADD EVENT
+                correctAnswerCheckboxes.Add(chk);
+                correctAnswersPanel.Controls.Add(chk);
             }
-            cmbCorrectAnswer.SelectedIndex = 0;
+        }
+
+        private void RepositionButtons()
+        {
+            int lastAnswerY = 0;
+            foreach (var txt in answerTextBoxes)
+            {
+                if (txt.Visible && txt.Location.Y > lastAnswerY)
+                {
+                    lastAnswerY = txt.Location.Y;
+                }
+            }
+
+            int newButtonY = lastAnswerY + 55;
+
+            foreach (Control ctrl in mainPanel.Controls)
+            {
+                if (ctrl is Button btn)
+                {
+                    if (btn.Text.Contains("Create Quiz"))
+                    {
+                        btn.Location = new Point(20, newButtonY);
+                    }
+                    else if (btn.Text == "Cancel")
+                    {
+                        btn.Location = new Point(20, newButtonY + 55);
+                    }
+                }
+            }
+
+            mainPanel.PerformLayout();
         }
 
         private void BtnOK_Click(object sender, EventArgs e)
@@ -462,9 +570,48 @@ namespace ClassPointQuiz
                 Answers.Add(answerTextBoxes[i].Text);
             }
 
+            // Get all selected correct answers
+            CorrectAnswerIndices = new List<int>();
+            foreach (var chk in correctAnswerCheckboxes)
+            {
+                if (chk.Checked)
+                {
+                    CorrectAnswerIndices.Add((int)chk.Tag);
+                }
+            }
+
+            // Validate correct answers
+            if (chkHasCorrect.Checked && CorrectAnswerIndices.Count == 0)
+            {
+                MessageBox.Show("Please select at least one correct answer.", 
+                    "Validation Error", 
+                    MessageBoxButtons.OK, 
+                    MessageBoxIcon.Warning);
+                return;
+            }
+
+            // ✅ NEW: Warn if "Allow multiple" is checked but only 1 correct answer
+            if (chkMultiple.Checked && CorrectAnswerIndices.Count < 2)
+            {
+                var result = MessageBox.Show(
+                    "You enabled 'Allow multiple choices' but only selected 1 correct answer.\n\n" +
+                    "Students will need to select ALL correct answers to get points.\n\n" +
+                    "Do you want to continue?",
+                    "Multiple Choice Notice",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Question);
+                
+                if (result == DialogResult.No)
+                {
+                    return;
+                }
+            }
+
+            // Set first correct answer for backwards compatibility
+            CorrectAnswerIndex = CorrectAnswerIndices.Count > 0 ? CorrectAnswerIndices[0] : 0;
+
             // Set all properties
             QuestionText = txtQuestion.Text;
-            CorrectAnswerIndex = cmbCorrectAnswer.SelectedIndex;
             AllowMultiple = chkMultiple.Checked;
             HasCorrect = chkHasCorrect.Checked;
             QuizMode = cmbQuizMode.SelectedItem.ToString().ToLower();
@@ -479,19 +626,14 @@ namespace ClassPointQuiz
         private void InitializeComponent()
         {
             this.SuspendLayout();
-            // 
-            // QuizConfigForm
-            // 
             this.ClientSize = new System.Drawing.Size(282, 253);
             this.Name = "QuizConfigForm";
             this.Load += new System.EventHandler(this.QuizConfigForm_Load);
             this.ResumeLayout(false);
-
         }
 
         private void QuizConfigForm_Load(object sender, EventArgs e)
         {
-
         }
     }
 }
