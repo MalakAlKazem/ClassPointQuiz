@@ -13,8 +13,8 @@ DB_CONFIG = {
     "host": os.getenv("DB_HOST", "localhost"),
     "port": int(os.getenv("DB_PORT", 5432)),
     "database": os.getenv("DB_NAME", "quiz_app"),
-    "user": os.getenv("DB_USER", "postgres"),
-    "password": os.getenv("DB_PASSWORD", "postGres"),
+    "user": os.getenv("DB_USER", "yourUserName"),
+    "password": os.getenv("DB_PASSWORD", "yourPass"),
     "sslmode": "disable"
 }
 
