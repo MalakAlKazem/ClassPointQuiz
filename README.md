@@ -535,5 +535,3 @@ For questions or support:
 - Repository: [ClassPointQuiz](https://github.com/MalakAlKazem/ClassPointQuiz)
 
 ---
-
-**Note**: This README reflects the actual implementation as of the latest codebase review. Features described here have been verified against the source code. 
