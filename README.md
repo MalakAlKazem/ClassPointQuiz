@@ -4,6 +4,8 @@ A quiz management system integrated with PowerPoint, allowing teachers to create
 
 ## 📋 Table of Contents
 - [Overview](#overview)
+- [Video Demo](#video-demo)
+- [Streamlit Dashboard Links](#streamlit-dashboard-links)
 - [Features](#features)
 - [System Architecture](#system-architecture)
 - [How the PowerPoint Add-in Works](#how-the-powerpoint-add-in-works)
@@ -46,7 +48,7 @@ Click the image below to watch a short demo of the project on YouTube:
 
 ## 🔗 Streamlit Dashboard Links
 
-These web dashboards are connected to the **same PostgreSQL database hosted on Neon**.
+These web dashboards are connected to the **same PostgreSQL database hosted on Neon**. (Note: you will find out that the teacher and student files uploaded in the project are more updated than in the links)
 
 ### 👨‍🏫 Teacher Dashboard (Streamlit Cloud)
 Used for teacher login, quiz creation, and dashboard access.
