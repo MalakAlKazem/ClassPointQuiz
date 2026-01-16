@@ -31,6 +31,37 @@ ClassPointQuiz is an application that integrates quiz functionality with PowerPo
 - **Streamlit Web Apps** (Python): Separate portals for teachers and students
 - **PostgreSQL Database**: Stores all quiz data, sessions, and student responses (hosted on Neon for production)
 
+## 🎥 Video Demo
+
+Click the image below to watch a short demo of the project on YouTube:
+
+[![ClassPointQuiz Demo](https://img.youtube.com/vi/tC6Ax2gZEeQ/0.jpg)](https://www.youtube.com/watch?v=tC6Ax2gZEeQ)
+
+> 🎯 The demo shows:
+> - PowerPoint Add-in loading automatically
+> - Teacher login via browser
+> - Quiz creation, running, insertion into slides
+> - Live session with class code
+> - Student participation and live results
+
+## 🔗 Streamlit Dashboard Links
+
+These web dashboards are connected to the **same PostgreSQL database hosted on Neon**.
+
+### 👨‍🏫 Teacher Dashboard (Streamlit Cloud)
+Used for teacher login, quiz creation, and dashboard access.
+
+🔗 https://quizapp-malakalkazem.streamlit.app/
+
+---
+
+### 🎓 Student Dashboard (Streamlit Cloud)
+Used by students to join quiz sessions using a class code.
+
+🔗 https://quizapp-joinclass.streamlit.app/
+
+---
+
 ## ✨ Features
 
 ### For Teachers
