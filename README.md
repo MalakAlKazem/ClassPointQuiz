@@ -471,7 +471,7 @@ You'll see live updates:
 - `POST /api/student/join` - Join session
 - `POST /api/student/answer` - Submit answer
 
-#### WebSocket
+### WebSocket
 - `WS /ws/session/{session_id}` - Real-time updates
 
 ## 🗄️ Database Schema
@@ -599,6 +599,7 @@ curl -X POST "http://localhost:8000/api/session/start" \
 
 #### Database Connection Failed
 **Problem**: Cannot connect to PostgreSQL
+
 **Solutions**:
 1. Verify PostgreSQL is running:
    ```bash
@@ -614,6 +615,7 @@ curl -X POST "http://localhost:8000/api/session/start" \
 
 #### Backend Won't Start
 **Problem**: `python main.py` fails
+
 **Solutions**:
 1. Install missing dependencies:
    ```bash
@@ -625,6 +627,7 @@ curl -X POST "http://localhost:8000/api/session/start" \
 
 #### Streamlit Apps Won't Load
 **Problem**: Streamlit portals show errors
+
 **Solutions**:
 1. Ensure backend is running first
 2. Check sys.path in student.py and teacher.py
@@ -639,6 +642,7 @@ curl -X POST "http://localhost:8000/api/session/start" \
 
 #### PowerPoint Add-in Not Appearing
 **Problem**: ClassPointQuiz tab not in PowerPoint
+
 **Solutions**:
 1. Rebuild solution in Visual Studio
 2. Check if add-in is disabled:
@@ -650,6 +654,7 @@ curl -X POST "http://localhost:8000/api/session/start" \
 
 #### Students Can't Join Session
 **Problem**: Invalid class code error
+
 **Solutions**:
 1. Verify session is active
 2. Check class code spelling (case-sensitive)
@@ -659,6 +664,7 @@ curl -X POST "http://localhost:8000/api/session/start" \
 
 #### Live Results Not Updating
 **Problem**: Dashboard shows stale data
+
 **Solutions**:
 1. Check WebSocket connection
 2. Refresh the page manually
@@ -717,7 +723,7 @@ git push origin feature/your-feature-name
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## 🙏 Acknowledgments
 
