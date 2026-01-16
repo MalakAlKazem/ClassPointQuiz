@@ -1,54 +1,58 @@
 # ClassPointQuiz
 
-A comprehensive quiz management system integrated with PowerPoint, allowing teachers to create interactive quizzes, manage live sessions, and track student responses in real-time.
+A quiz management system integrated with PowerPoint, allowing teachers to create interactive quizzes, manage live sessions, and track student responses.
 
 ## 📋 Table of Contents
 - [Overview](#overview)
 - [Features](#features)
 - [System Architecture](#system-architecture)
+- [How the PowerPoint Add-in Works](#how-the-powerpoint-add-in-works)
+- [Live Updates Explanation](#live-updates-explanation)
+- [Streamlit Dashboard Links](#streamlit-dashboard-links)
 - [Prerequisites](#prerequisites)
 - [Installation & Setup](#installation--setup)
 - [Running the Application](#running-the-application)
 - [Teacher Guide](#teacher-guide)
 - [Student Guide](#student-guide)
-- [System Functionalities](#system-functionalities)
 - [Database Schema](#database-schema)
 - [API Documentation](#api-documentation)
 - [Troubleshooting](#troubleshooting)
+- [Known Limitations](#known-limitations)
+- [Future Improvements](#future-improvements)
 - [Contributing](#contributing)
 - [License](#license)
 
 ## 🎯 Overview
 
-ClassPointQuiz is a full-stack application that bridges the gap between traditional teaching and interactive learning. The system consists of:
-- **PowerPoint Add-in** (C#): Allows teachers to manage quizzes directly from PowerPoint
-- **FastAPI Backend** (Python): Handles authentication, quiz management, and real-time session control
+ClassPointQuiz is an application that integrates quiz functionality with PowerPoint presentations. The system consists of:
+
+- **PowerPoint Add-in** (C# / VSTO): Allows teachers to manage quizzes directly from PowerPoint
+- **FastAPI Backend** (Python): Handles authentication, quiz management, and session control
 - **Streamlit Web Apps** (Python): Separate portals for teachers and students
-- **PostgreSQL Database**: Stores all quiz data, sessions, and student responses
+- **PostgreSQL Database**: Stores all quiz data, sessions, and student responses (hosted on Neon for production)
 
 ## ✨ Features
 
 ### For Teachers
-- 📝 Create and manage multiple-choice quizzes
+- 📝 Create and manage multiple-choice quizzes (single question per quiz)
 - 🎨 Insert quiz content directly into PowerPoint slides
-- 🚀 Start live quiz sessions with unique class codes
-- 📊 View real-time results and student participation
-- 🔒 Secure authentication and session management
-- 📈 Track quiz history and analytics
+- 🚀 Start live quiz sessions with unique 6-character class codes
+- 📊 View results as students submit (polling-based updates)
+- 🔒 Secure authentication with session persistence
+- 📈 Track quiz history and basic analytics
 
 ### For Students
 - 🎓 Join quiz sessions using class codes
-- ⏱️ Answer questions with real-time submission
-- 🏆 Receive instant feedback on correct answers
-- 📱 Clean, responsive web interface
+- ⏱️ Answer questions with timed submission
+- 📱 Clean, responsive web interface via Streamlit
 
 ### System Capabilities
-- 🔐 Secure user authentication and authorization
+- 🔐 Teacher authentication and authorization
 - 🌐 RESTful API for all operations
-- 💾 Persistent data storage with PostgreSQL
-- ⚡ Real-time updates using WebSocket connections
-- 🎯 Multiple quiz modes (easy, medium, hard)
-- 📊 Comprehensive result visualization
+- 💾 Persistent data storage with PostgreSQL (Neon)
+- 🔄 Polling-based updates for live results
+- 🎯 Quiz difficulty modes (easy, medium, hard)
+- 📊 Result visualization with charts
 
 ## 🏗️ System Architecture
 
@@ -57,12 +61,11 @@ ClassPointQuiz/
 ├── quizApp-addin/
 │   ├── backend/                 # FastAPI backend server
 │   │   ├── main.py             # Main API endpoints
-│   │   ├── database.py         # Database operations
-│   │   ├── websocket_manager.py# Real-time connections
+│   │   ├── database. py         # Database helper functions
 │   │   ├── models.py           # Pydantic models
 │   │   ├── requirements.txt    # Python dependencies
 │   │   └── .env                # Environment configuration
-│   ├── powerpoint-addin/       # C# PowerPoint Add-in
+│   ├── powerpoint-addin/       # C# PowerPoint Add-in (VSTO)
 │   │   └── ClassPointQuiz.sln  # Visual Studio solution
 │   ├── streamlit-side/         # Web applications
 │   │   ├── teacher/            # Teacher portal
@@ -72,65 +75,161 @@ ClassPointQuiz/
 │   └── quiz_app_db             # PostgreSQL database dump
 ```
 
+### Data Flow
+
+```
+┌─────────────────┐     Polling (~2s)     ┌─────────────────┐
+│  PowerPoint     │◄────────────────────►│  FastAPI        │
+│  Add-in (C#)    │     REST API          │  Backend        │
+└─────────────────┘                       └────────┬────────┘
+                                                   │
+┌─────────────────┐                                │
+│  Teacher        │     REST API + Direct DB      │
+│  Streamlit      │◄───────────────────────────────┤
+└─────────────────┘     Polling (~3s)              │
+                                                   │
+┌─────────────────┐     Direct DB Access           │
+│  Student        │◄───────────────────────────────┤
+│  Streamlit      │     (database. py helpers)      │
+└─────────────────┘     Polling (~5s)              │
+                                                   │
+                                          ┌────────▼────────┐
+                                          │  PostgreSQL     │
+                                          │  (Neon Cloud)   │
+                                          └─────────────────┘
+```
+
+## 🔌 How the PowerPoint Add-in Works
+
+### Add-in Loading
+The ClassPointQuiz add-in loads automatically when Microsoft PowerPoint opens. It appears as a panel in the PowerPoint interface. 
+
+### Login Flow
+1. **Initial State**: When the add-in loads, it checks for saved login credentials by reading a file (`teacher_login.txt`) stored in the user's home directory. 
+2. **Not Logged In**: If no valid credentials are found, the add-in displays a "Login" button. 
+3. **Login Process**:
+   - Clicking "Login" opens the Streamlit teacher portal in your default web browser
+   - Log in through the web portal with your email and password
+   - Upon successful login, the portal saves credentials to `~/teacher_login.txt`
+4. **Automatic Detection**: The add-in polls every 2 seconds to check for the login file.  Once detected, the UI automatically updates to show the logged-in state with your name and access to quiz features. 
+5. **Session Persistence**:  Credentials remain saved until you explicitly log out, so you won't need to log in again when reopening PowerPoint.
+
+### Quiz Management from PowerPoint
+Once logged in, you can:
+- View and select your quizzes
+- Configure quiz settings (auto-close timer, etc.)
+- Start a quiz session (generates a class code)
+- View live results in a popup dialog
+- Insert quiz content or results into slides
+
+### Error Handling
+- If the Streamlit portal does not open automatically, check the `app.config` file in the add-in directory for the correct `StreamlitUrl` and `StreamlitAppPath` settings
+- You can manually run `streamlit run teacher. py` from the terminal and navigate to the URL
+- Use the "Check Login Status (Debug)" button to verify the login file path
+
+## 🔄 Live Updates Explanation
+
+### Polling-Based Architecture
+This system uses **polling** (periodic requests) rather than WebSockets for live updates. This design was chosen for simplicity and reliability across different deployment environments.
+
+### Refresh Intervals
+| Component | Interval | Purpose |
+|-----------|----------|---------|
+| PowerPoint Add-in (login check) | 2 seconds | Detects when teacher logs in via browser |
+| PowerPoint Live Results Dialog | 2 seconds | Fetches latest student responses |
+| Teacher Streamlit Dashboard | 3 seconds | Updates participant count and results |
+| Student Streamlit App | 5 seconds | Checks session status (active/closed) |
+
+### How It Works
+- **Teacher Dashboard**: Uses `streamlit_autorefresh` to automatically reload the page every 3 seconds during a live session, fetching the latest results from the database. 
+- **Student App**: Uses `streamlit_autorefresh` every 5 seconds to check if the session is still active and update the UI accordingly. 
+- **PowerPoint Add-in**:  Uses C# `Timer` objects to periodically call the FastAPI endpoints and refresh the results display.
+
+### Why Polling? 
+- Simpler deployment (no WebSocket infrastructure needed)
+- Works reliably with Streamlit Cloud hosting
+- Acceptable latency for classroom quiz scenarios (3-5 seconds)
+
+## 🔗 Streamlit Dashboard Links
+
+### Production (Streamlit Cloud)
+- **Teacher Dashboard**: https://quizapp-teacher. streamlit.app
+- **Student Dashboard**:  https://quizapp-joinclass.streamlit.app
+
+### Local Development
+- **Teacher Dashboard**: http://localhost:8501
+- **Student Dashboard**: http://localhost:8502
+
+Both dashboards connect to the PostgreSQL database hosted on Neon.  They support full read/write operations for their respective user roles. 
+
 ## 📦 Prerequisites
 
 ### Required Software
 - **Python 3.9+** - [Download Python](https://www.python.org/downloads/)
-- **PostgreSQL 12+** - [Download PostgreSQL](https://www.postgresql.org/download/)
-- **Microsoft PowerPoint** (Office 2016 or later)
+- **PostgreSQL 12+** (for local development) - [Download PostgreSQL](https://www.postgresql.org/download/)
+- **Microsoft PowerPoint** (Office 2016 or later) - Windows only
 - **Visual Studio 2019+** (for building the PowerPoint add-in)
 - **.NET Framework 4.7.2+**
 
 ### Python Packages
-All Python dependencies are listed in `quizApp-addin/backend/requirements.txt`
+All Python dependencies are listed in `quizApp-addin/backend/requirements. txt`
 
 ## 🚀 Installation & Setup
 
 ### Step 1: Clone the Repository
 ```bash
-git clone https://github.com/MalakAlKazem/ClassPointQuiz.git
+git clone https://github.com/MalakAlKazem/ClassPointQuiz. git
 cd ClassPointQuiz
 ```
 
-### Step 2: Set Up PostgreSQL Database
+### Step 2: Database Setup
 
+#### Option A: Use Neon Cloud Database (Recommended for Production)
+The production database is hosted on [Neon](https://neon.tech/). Update the `.env` file with your Neon connection credentials. 
+
+#### Option B:  Local Development with PostgreSQL
 1. **Install PostgreSQL** if not already installed
 2. **Create a new database**:
 ```sql
 CREATE DATABASE quiz_app;
 ```
-
 3. **Restore the database dump**:
 ```bash
 psql -U postgres -d quiz_app -f quizApp-addin/quiz_app_db
 ```
-
-Or manually create tables using the schema in the database file.
+4. Optionally use **pgAdmin** to browse and manage your local database during development. 
 
 ### Step 3: Configure Environment Variables
 
-1. Navigate to the backend directory:
+1. Navigate to the backend directory: 
 ```bash
 cd quizApp-addin/backend
 ```
 
-2. Update the `.env` file with your database credentials:
+2. Update the `.env` file with your database credentials: 
 ```env
-DB_HOST=localhost
+# For Neon (production)
+DB_HOST=your-neon-host.neon.tech
 DB_PORT=5432
 DB_NAME=quiz_app
-DB_USER=postgres
-DB_PASSWORD=your_password_here
+DB_USER=your_username
+DB_PASSWORD=your_password
+
+# For local development
+# DB_HOST=localhost
+# DB_PORT=5432
+# DB_NAME=quiz_app
+# DB_USER=postgres
+# DB_PASSWORD=your_local_password
 ```
 
 ### Step 4: Install Python Dependencies
 
 ```bash
-# Install backend dependencies
 cd quizApp-addin/backend
-pip install -r requirements.txt
+pip install -r requirements. txt
 
-# Install Streamlit dependencies
+# Additional Streamlit dependencies
 pip install streamlit streamlit-autorefresh plotly pandas
 ```
 
@@ -138,21 +237,21 @@ pip install streamlit streamlit-autorefresh plotly pandas
 
 ```bash
 cd quizApp-addin/backend
-python test.py
+python test. py
 ```
 
-You should see:
+You should see: 
 ```
-✅ Database connection successful!
+✅ Database connection successful! 
 📊 Teachers in database: X
 ```
 
-### Step 6: Build PowerPoint Add-in (Optional)
+### Step 6: Build PowerPoint Add-in
 
 1. Open `quizApp-addin/powerpoint-addin/ClassPointQuiz.sln` in Visual Studio
 2. Build the solution (F6 or Build → Build Solution)
 3. The add-in will be automatically registered during build
-4. Restart PowerPoint to see the add-in
+4. Restart PowerPoint to see the add-in panel
 
 ## 🎮 Running the Application
 
@@ -180,16 +279,13 @@ The teacher portal will open at: `http://localhost:8501`
 
 ```bash
 cd quizApp-addin/streamlit-side/student
-streamlit run student.py
+streamlit run student. py
 ```
 
 The student portal will open at: `http://localhost:8502`
 
-### Quick Start Script
+### Quick Start Script (Windows)
 
-Create a `start.sh` (Linux/Mac) or `start.bat` (Windows) file:
-
-**start.bat (Windows):**
 ```batch
 @echo off
 start cmd /k "cd quizApp-addin\backend && python main.py"
@@ -198,402 +294,132 @@ start cmd /k "cd quizApp-addin\streamlit-side\teacher && streamlit run teacher.p
 start cmd /k "cd quizApp-addin\streamlit-side\student && streamlit run student.py"
 ```
 
-**start.sh (Linux/Mac):**
-```bash
-#!/bin/bash
-cd quizApp-addin/backend && python main.py &
-sleep 3
-cd quizApp-addin/streamlit-side/teacher && streamlit run teacher.py &
-cd quizApp-addin/streamlit-side/student && streamlit run student.py &
-```
-
 ## 👨‍🏫 Teacher Guide
 
-### 1. Registration and Login (FR-T1)
+### 1. Registration and Login
 
-#### Register a New Account
-1. Navigate to the Teacher Portal (`http://localhost:8501`)
+#### Via Streamlit Portal
+1. Navigate to the Teacher Portal (`http://localhost:8501` or the Streamlit Cloud URL)
 2. Click on "Register New Account"
-3. Fill in:
-   - Username
-   - Email address
-   - Password
+3. Fill in:  Username, Email address, Password
 4. Click "Create Account"
-5. You'll be automatically redirected to the dashboard
+5. You'll be logged in and credentials are saved for PowerPoint access
 
-#### Login to Existing Account
-1. Enter your registered email and password
-2. Click "Login"
-3. Upon successful login, you'll see your dashboard
+#### Via PowerPoint Add-in
+1. Open PowerPoint — the ClassPointQuiz panel appears automatically
+2. If not logged in, click the "Login" button
+3. Your browser opens to the Streamlit teacher portal
+4. Log in with your credentials
+5. Return to PowerPoint — the panel will automatically update within a few seconds
 
-### 2. Create a Quiz (FR-T2)
+### 2. Create a Quiz
 
 1. From the dashboard, click **"Create New Quiz"**
 2. Fill in the quiz details:
-   - **Quiz Title**: Give your quiz a descriptive name
-   - **Question Text**: Enter the question students will answer
+   - **Quiz Title**:  Descriptive name for your quiz
+   - **Question Text**: The question students will answer
    - **Number of Choices**: Select 2-8 answer options
-3. Enter the answer choices:
-   - Type each answer option
-   - Check the ✓ box next to the **correct answer(s)**
-4. Configure quiz settings:
+3. Enter the answer choices and mark the correct one(s)
+4. Configure quiz settings: 
    - **Quiz Mode**: Easy, Medium, or Hard
    - **Allow Multiple Answers**: Enable if more than one answer is correct
    - **Auto-close Timer**: Set how long the quiz stays open
 5. Click **"Create Quiz"**
-6. Your quiz is now saved and ready to use!
 
-### 3. View and Select Existing Quizzes (FR-T3)
-
-1. From the dashboard, click **"View My Quizzes"**
-2. Browse your quiz library:
-   - View quiz titles, creation dates, and usage statistics
-   - See how many times each quiz has been run
-3. Click on any quiz to:
-   - View details
-   - Edit quiz content
-   - Run a new session
-   - View past session results
-
-### 4. Insert Quiz into PowerPoint (FR-T4)
-
-**Using the PowerPoint Add-in:**
-1. Open PowerPoint
-2. Navigate to the **ClassPointQuiz** tab in the ribbon
-3. Click **"Insert Quiz"**
-4. Select a quiz from your library
-5. The quiz content will be automatically inserted into a new slide with:
-   - Question text
-   - Answer choices formatted as bullet points
-   - Professional styling
-  
-### 5. Start a Live Session (FR-T5)
+### 3. Start a Live Session
 
 1. Select a quiz from your library
 2. Click **"Run Quiz Session"** or **"Start Session"**
-3. The system will:
-   - Generate a unique 6-character **class code**
-   - Open the live session dashboard
-   - Display the class code prominently
+3. The system generates a unique 6-character class code
 4. Share the class code with your students
-5. Monitor as students join in real-time
+5. Monitor responses as students join and answer
 
-### 6. View Live Results (FR-T6)
+### 4. View Live Results
 
 During an active session, you'll see:
-
-#### Real-time Dashboard
 - **Participant Count**: Number of students who have joined
 - **Response Distribution**: Bar chart showing answer choices
 - **Percentage Breakdown**: What % chose each option
 - **Correct Answer Highlighting**: Green highlight on correct answers
 
-#### Live Updates
-- The dashboard auto-refreshes every 2 seconds
-- New student responses appear instantly
-- Watch participation rates change in real-time
+Results update automatically every 2-3 seconds via polling.
 
-#### Detailed Student View
-- Click **"View Student Details"** to see:
-  - Individual student names
-  - Their selected answers
-  - Whether they answered correctly
-  - Submission timestamps
+### 5. Close a Session
 
-### 7. Close a Session (FR-T7)
-
-1. When the quiz is complete, click **"Close Session"**
-2. Confirm the closure
-3. The session will:
-   - Stop accepting new responses
-   - Lock the results
-   - Archive the data
-4. Students will see a "Session Closed" message
-5. Final results are saved to the database
-
-### 8. Session State Management (FR-T8)
-
-The system automatically maintains:
-- **Quiz ID**: Tracks which quiz is being used
-- **Session ID**: Unique identifier for each live session
-- **Class Code**: 6-character code for student access
-- **Teacher Context**: Your authentication state
-- **Session Status**: Active, closed, or completed
-
-All state is preserved even if you:
-- Refresh the page
-- Close and reopen the portal
-- Switch between different quizzes
-
-### 9. Insert Results into Slides (FR-T9)
-
-**Optional Feature - Export Results to PowerPoint:**
-
-1. After closing a session, navigate to the results page
-2. Click **"Export to PowerPoint"**
-3. Choose export format:
-   - **Summary Slide**: Overview with charts
-   - **Detailed Results**: Full student breakdown
-   - **Both**: Complete presentation
-4. The system generates slides with:
-   - Response distribution charts
-   - Participant statistics
-   - Top performers
-   - Answer breakdowns
-5. Save or insert into your existing presentation
+1. Click **"Close Session"** when the quiz is complete
+2. The session stops accepting new responses
+3. Final results are saved to the database
 
 ## 🎓 Student Guide
 
 ### 1. Joining a Quiz Session
 
-1. Navigate to the Student Portal (`http://localhost:8502`)
-2. You'll see the **"Join Quiz"** page
-3. Enter the information:
+1. Navigate to the Student Portal (local or Streamlit Cloud URL)
+2. Enter: 
    - **Your Name**: How you want to be identified
    - **Class Code**: The 6-character code from your teacher
-4. Click **"Join Session"**
+3. Click **"Join Session"**
 
 ### 2. Answering Questions
 
-1. Once joined, you'll see:
-   - The quiz question
-   - All available answer choices
-   - Timer (if applicable)
-2. Select your answer by clicking on the choice
-3. Review your selection
-4. Click **"Submit Answer"**
+1. Read the quiz question and available choices
+2. Select your answer (single or multiple depending on quiz settings)
+3. Click **"Submit Answer"**
+4. You'll see a confirmation message
 
-### 3. Multiple Choice Options
+### 3. Session Status
 
-- **Single Answer**: Click one radio button
-- **Multiple Answers**: Check multiple boxes (if enabled by teacher)
-- You can change your answer before submitting
-
-### 4. Session Status
-
-You'll see live updates:
-- **Waiting for teacher**: Session not started yet
+The app automatically checks every 5 seconds: 
 - **Active**: Answer questions now
-- **Closed**: Session has ended
-- **Your response recorded**: Confirmation of submission
-
-## 🔧 System Functionalities
-
-### Authentication System
-
-#### Teacher Authentication
-- Registration with username, email, and password
-- Password hashing using SHA-256
-- Secure login with session management
-- Email uniqueness validation
-- Password strength requirements
-
-#### Student Authentication
-- Name-based identification
-- Session-specific access via class codes
-- No password required for students
-- Anonymous participation option
-
-### Quiz Management
-
-#### Quiz Creation
-- Multiple-choice questions (2-8 options)
-- Single or multiple correct answers
-- Quiz difficulty levels (easy, medium, hard)
-- Reusable quiz templates
-- Edit and update existing quizzes
-
-#### Quiz Configuration
-- **start_with_slide**: Auto-insert into PowerPoint
-- **minimize_window**: Minimize result window after close
-- **auto_close_minutes**: Automatic session timeout
-- **allow_multiple**: Enable multiple answer selection
-- **has_correct**: Mark correct answers
-
-### Session Management
-
-#### Live Sessions
-- Unique class code generation (6 characters)
-- Real-time student participation tracking
-- WebSocket-based live updates
-- Session status control (active/closed)
-- Maximum participants: Unlimited
-
-#### Session Controls
-- Start session
-- Pause session (future feature)
-- Close session
-- View live results
-- Export session data
-
-### Results and Analytics
-
-#### Real-time Results
-- Answer distribution visualization
-- Participant count tracking
-- Response percentages
-- Correct answer identification
-- Individual student responses
-
-#### Historical Data
-- Past session results
-- Quiz usage statistics
-- Student performance trends
-- Teacher analytics dashboard
-
-### API Endpoints
-
-#### Authentication
-- `POST /api/auth/register` - Teacher registration
-- `POST /api/auth/login` - Teacher login
-
-#### Quiz Operations
-- `POST /api/quiz/create` - Create new quiz
-- `GET /api/quiz/teacher/{teacher_id}` - Get teacher's quizzes
-- `GET /api/quiz/{quiz_id}` - Get quiz details
-
-#### Session Operations
-- `POST /api/session/start` - Start quiz session
-- `POST /api/session/close/{session_id}` - Close session
-- `GET /api/session/by-code/{class_code}` - Get session by code
-- `GET /api/session/{session_id}/results` - Get live results
-- `GET /api/session/{session_id}/students` - Get student details
-
-#### Student Operations
-- `POST /api/student/join` - Join session
-- `POST /api/student/answer` - Submit answer
-
-### WebSocket
-- `WS /ws/session/{session_id}` - Real-time updates
+- **Closed**: Session has ended, answers no longer accepted
 
 ## 🗄️ Database Schema
 
+### Deployment
+- **Production**: PostgreSQL hosted on [Neon](https://neon.tech/)
+- **Local Development**: Local PostgreSQL with pgAdmin for management
+
 ### Tables
 
-#### teachers
-- `teacher_id` (PK, SERIAL)
-- `username` (VARCHAR, UNIQUE)
-- `email` (VARCHAR, UNIQUE)
-- `password` (VARCHAR, hashed)
-- `created_at` (TIMESTAMP)
-
-#### quizzes
-- `quiz_id` (PK, SERIAL)
-- `teacher_id` (FK → teachers)
-- `title` (VARCHAR)
-- `num_choices` (INTEGER)
-- `allow_multiple` (BOOLEAN)
-- `has_correct` (BOOLEAN)
-- `competition_mode` (BOOLEAN)
-- `start_with_slide` (BOOLEAN)
-- `minimize_result_window` (BOOLEAN)
-- `close_submission_after` (INTEGER)
-- `quiz_mode` (VARCHAR)
-- `created_at` (TIMESTAMP)
-
-#### questions
-- `question_id` (PK, SERIAL)
-- `quiz_id` (FK → quizzes)
-- `question_text` (TEXT)
-- `order_number` (INTEGER)
-- `created_at` (TIMESTAMP)
-
-#### answers
-- `answer_id` (PK, SERIAL)
-- `question_id` (FK → questions)
-- `answer_text` (TEXT)
-- `is_correct` (BOOLEAN)
-- `order_number` (INTEGER)
-
-#### quiz_sessions
-- `session_id` (PK, SERIAL)
-- `quiz_id` (FK → quizzes)
-- `class_code` (VARCHAR, UNIQUE)
-- `status` (VARCHAR)
-- `started_at` (TIMESTAMP)
-- `closed_at` (TIMESTAMP)
-- `auto_close_minutes` (INTEGER)
-
-#### students
-- `student_id` (PK, SERIAL)
-- `session_id` (FK → quiz_sessions)
-- `name` (VARCHAR)
-- `joined_at` (TIMESTAMP)
-
-#### student_answers
-- `id` (PK, SERIAL)
-- `student_id` (FK → students)
-- `session_id` (FK → quiz_sessions)
-- `question_id` (FK → questions)
-- `answer_id` (FK → answers)
-- `is_correct` (BOOLEAN)
-- `submitted_at` (TIMESTAMP)
-- `time_taken_seconds` (INTEGER)
-- `selected_options` (TEXT)
+| Table | Description |
+|-------|-------------|
+| `teachers` | Teacher accounts (id, username, email, hashed password) |
+| `quizzes` | Quiz definitions (title, settings, mode) |
+| `questions` | Quiz questions (one per quiz currently) |
+| `answers` | Answer choices for questions |
+| `quiz_sessions` | Active/closed quiz sessions with class codes |
+| `students` | Students who joined sessions |
+| `student_answers` | Submitted answers with correctness |
 
 ## 📡 API Documentation
 
 ### Interactive API Docs
-Once the backend is running, visit:
+Once the backend is running, visit: 
 - **Swagger UI**: http://localhost:8000/docs
-- **ReDoc**: http://localhost:8000/redoc
+- **ReDoc**:  http://localhost:8000/redoc
 
-### Example API Calls
+### Key Endpoints
 
-#### Register Teacher
-```bash
-curl -X POST "http://localhost:8000/api/auth/register" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "username": "john_doe",
-    "email": "john@example.com",
-    "password": "secure_password"
-  }'
-```
-
-#### Login
-```bash
-curl -X POST "http://localhost:8000/api/auth/login" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "john@example.com",
-    "password": "secure_password"
-  }'
-```
-
-#### Create Quiz
-```bash
-curl -X POST "http://localhost:8000/api/quiz/create?teacher_id=1&title=Sample%20Quiz&question_text=What%20is%202+2?&num_choices=4&allow_multiple=false&has_correct=true" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "answers": [
-      {"text": "3", "order": 0, "is_correct": false},
-      {"text": "4", "order": 1, "is_correct": true},
-      {"text": "5", "order": 2, "is_correct": false},
-      {"text": "6", "order": 3, "is_correct": false}
-    ]
-  }'
-```
-
-#### Start Session
-```bash
-curl -X POST "http://localhost:8000/api/session/start" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "quiz_id": 1,
-    "override_auto_close_minutes": 5
-  }'
-```
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/auth/register` | Teacher registration |
+| POST | `/api/auth/login` | Teacher login |
+| POST | `/api/quiz/create` | Create new quiz |
+| GET | `/api/quiz/teacher/{teacher_id}` | Get teacher's quizzes |
+| POST | `/api/session/start` | Start quiz session |
+| POST | `/api/session/close/{session_id}` | Close session |
+| GET | `/api/session/{session_id}/results` | Get live results |
+| POST | `/api/student/join` | Student joins session |
+| POST | `/api/student/answer` | Submit answer |
 
 ## 🔍 Troubleshooting
 
-### Common Issues
-
-#### Database Connection Failed
+### Database Connection Failed
 **Problem**: Cannot connect to PostgreSQL
 
 **Solutions**:
-1. Verify PostgreSQL is running:
+1. For Neon:  Verify credentials in `.env` file match your Neon dashboard
+2. For local:  Verify PostgreSQL is running: 
    ```bash
    # Windows
    pg_ctl status
@@ -601,122 +427,97 @@ curl -X POST "http://localhost:8000/api/session/start" \
    # Linux/Mac
    sudo systemctl status postgresql
    ```
-2. Check database credentials in `.env` file
-3. Ensure database `quiz_app` exists
-4. Verify firewall settings
+3. Check that the database `quiz_app` exists
+4. Verify firewall/SSL settings (Neon requires SSL)
 
-#### Backend Won't Start
-**Problem**: `python main.py` fails
-
+### Backend Won't Start
 **Solutions**:
-1. Install missing dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
+1. Install missing dependencies: `pip install -r requirements.txt`
 2. Check for port conflicts (port 8000)
-3. Review error messages in console
-4. Verify Python version (3.9+)
+3. Verify Python version (3.9+)
 
-#### Streamlit Apps Won't Load
-**Problem**: Streamlit portals show errors
-
-**Solutions**:
+### Streamlit Apps Won't Load
+**Solutions**: 
 1. Ensure backend is running first
-2. Check sys.path in student.py and teacher.py
-3. Verify Streamlit installation:
-   ```bash
-   streamlit --version
-   ```
-4. Clear Streamlit cache:
-   ```bash
-   streamlit cache clear
-   ```
+2. Check `sys.path` in student. py and teacher.py points to correct backend location
+3. Clear Streamlit cache: `streamlit cache clear`
 
-#### PowerPoint Add-in Not Appearing
-**Problem**: ClassPointQuiz tab not in PowerPoint
-
+### PowerPoint Add-in Not Appearing
 **Solutions**:
-1. Rebuild solution in Visual Studio
-2. Check if add-in is disabled:
+1. Rebuild solution in Visual Studio (Run as Administrator)
+2. Check if add-in is disabled: 
    - File → Options → Add-ins
-   - Manage: COM Add-ins → Go
+   - Manage:  COM Add-ins → Go
    - Enable ClassPointQuiz
 3. Restart PowerPoint
-4. Run Visual Studio as Administrator
 
-#### Students Can't Join Session
-**Problem**: Invalid class code error
-
+### Login Portal Does Not Open from PowerPoint
 **Solutions**:
-1. Verify session is active
+1. Check `app.config` file for correct `StreamlitUrl` and `StreamlitAppPath` settings
+2. Manually start Streamlit:  `streamlit run teacher.py`
+3. Navigate to `http://localhost:8501` in your browser
+4. After logging in, return to PowerPoint and wait for auto-detection
+
+### Students Can't Join Session
+**Solutions**: 
+1. Verify session is still active (not auto-closed)
 2. Check class code spelling (case-sensitive)
-3. Ensure backend is running
-4. Check session hasn't auto-closed
-5. Verify database connection
+3. Ensure backend is running and accessible
+4. Verify database connection
 
-#### Live Results Not Updating
-**Problem**: Dashboard shows stale data
-
-**Solutions**:
-1. Check WebSocket connection
+### Live Results Not Updating
+**Solutions**: 
+1. Check that backend is running and responding
 2. Refresh the page manually
-3. Verify backend WebSocket endpoint is accessible
+3. Verify `streamlit-autorefresh` is installed
 4. Check browser console for errors
-5. Ensure st_autorefresh is installed
 
-### Logs and Debugging
+## ⚠️ Known Limitations
 
-#### Backend Logs
-View API logs in the terminal where `main.py` is running
+| Limitation | Details |
+|------------|---------|
+| **Windows Only** | The PowerPoint add-in uses VSTO, which only works on Windows |
+| **Polling Latency** | Results update every 2-5 seconds (not instant) |
+| **Single Question Per Quiz** | Each quiz currently supports one question only |
+| **No Student Authentication** | Students join with just a name (no accounts) |
+| **Local Path Dependencies** | Streamlit apps have hardcoded `sys.path` that may need adjustment |
 
-#### Database Logs
-```bash
-# Check PostgreSQL logs
-tail -f /var/log/postgresql/postgresql-12-main.log
-```
+## 🚀 Future Improvements
 
-#### Streamlit Logs
-Logs appear in the terminal where Streamlit apps are running
+- **WebSocket Integration**: Replace polling with WebSockets for instant updates
+- **Multiple Questions Per Session**: Support multi-question quizzes
+- **Additional Question Types**: True/False, short answer, matching
+- **Cross-Platform Teacher Client**: Web-based alternative to PowerPoint add-in
+- **Student Authentication**: Optional student accounts and progress tracking
+- **Enhanced Analytics**: Detailed performance reports and export options
+- **Mobile-Friendly Design**: Improved responsive design for student app
 
-### Getting Help
+## 🤝 Contributing
 
-If issues persist:
-1. Check the [GitHub Issues](https://github.com/MalakAlKazem/ClassPointQuiz/issues)
-2. Review API documentation at `/docs`
-3. Verify all prerequisites are installed
-4. Check database connectivity with `test.py`
-
-# Contributing
-
-To contribute to this project, follow these steps:
+To contribute to this project: 
 
 1. **Fork the repository**
 2. **Clone your fork**
-   
+3. **Create a feature branch**
    ```bash
    git checkout -b feature/your-feature-name
    ```
-
-3. **Make your changes**
-   
+4. **Make your changes and commit**
    ```bash
-   git commit -m 'Add: description of your feature'
+   git commit -m 'Add:  description of your feature'
    ```
-
-4. **Push your changes**
-   
+5. **Push your changes**
    ```bash
    git push origin feature/your-feature-name
    ```
-
-5. **Create a pull request**
-
-Thank you for contributing!
+6. **Create a pull request**
 
 ## 📞 Contact
 
 For questions or support:
-- GitHub: [@MalakAlKazem](https://github.com/MalakAlKazem)
+- GitHub:  [@MalakAlKazem](https://github.com/MalakAlKazem)
 - Repository: [ClassPointQuiz](https://github.com/MalakAlKazem/ClassPointQuiz)
 
 ---
+
+**Note**: This README reflects the actual implementation as of the latest codebase review. Features described here have been verified against the source code. 
