@@ -1,0 +1,1116 @@
+--
+-- PostgreSQL database dump
+--
+
+\restrict vHmHjZaB3hOXmuXpfJbs9TZNNrV2setMgf09Leeg5UNfvgkky8TAMccJvp6PtII
+
+-- Dumped from database version 17.6
+-- Dumped by pg_dump version 17.6
+
+-- Started on 2026-01-16 15:09:31
+
+SET statement_timeout = 0;
+SET lock_timeout = 0;
+SET idle_in_transaction_session_timeout = 0;
+SET transaction_timeout = 0;
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = on;
+SELECT pg_catalog.set_config('search_path', '', false);
+SET check_function_bodies = false;
+SET xmloption = content;
+SET client_min_messages = warning;
+SET row_security = off;
+
+--
+-- TOC entry 231 (class 1255 OID 16942)
+-- Name: update_participant_count(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.update_participant_count() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    UPDATE quiz_sessions 
+    SET total_participants = (
+        SELECT COUNT(*) FROM students WHERE session_id = NEW.session_id
+    )
+    WHERE session_id = NEW.session_id;
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION public.update_participant_count() OWNER TO postgres;
+
+SET default_tablespace = '';
+
+SET default_table_access_method = heap;
+
+--
+-- TOC entry 224 (class 1259 OID 16860)
+-- Name: answers; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.answers (
+    answer_id integer NOT NULL,
+    question_id integer,
+    answer_text text NOT NULL,
+    answer_order integer NOT NULL,
+    is_correct boolean DEFAULT false
+);
+
+
+ALTER TABLE public.answers OWNER TO postgres;
+
+--
+-- TOC entry 5001 (class 0 OID 0)
+-- Dependencies: 224
+-- Name: TABLE answers; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON TABLE public.answers IS 'Multiple choice options';
+
+
+--
+-- TOC entry 223 (class 1259 OID 16859)
+-- Name: answers_answer_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.answers_answer_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.answers_answer_id_seq OWNER TO postgres;
+
+--
+-- TOC entry 5002 (class 0 OID 0)
+-- Dependencies: 223
+-- Name: answers_answer_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.answers_answer_id_seq OWNED BY public.answers.answer_id;
+
+
+--
+-- TOC entry 222 (class 1259 OID 16846)
+-- Name: questions; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.questions (
+    question_id integer NOT NULL,
+    quiz_id integer,
+    question_text text NOT NULL
+);
+
+
+ALTER TABLE public.questions OWNER TO postgres;
+
+--
+-- TOC entry 5003 (class 0 OID 0)
+-- Dependencies: 222
+-- Name: TABLE questions; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON TABLE public.questions IS 'Quiz questions';
+
+
+--
+-- TOC entry 221 (class 1259 OID 16845)
+-- Name: questions_question_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.questions_question_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.questions_question_id_seq OWNER TO postgres;
+
+--
+-- TOC entry 5004 (class 0 OID 0)
+-- Dependencies: 221
+-- Name: questions_question_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.questions_question_id_seq OWNED BY public.questions.question_id;
+
+
+--
+-- TOC entry 226 (class 1259 OID 16875)
+-- Name: quiz_sessions; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.quiz_sessions (
+    session_id integer NOT NULL,
+    quiz_id integer,
+    class_code character varying(10) NOT NULL,
+    status character varying(20) DEFAULT 'active'::character varying,
+    started_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    closed_at timestamp without time zone,
+    show_responses boolean DEFAULT true,
+    total_participants integer DEFAULT 0,
+    auto_close_minutes integer
+);
+
+
+ALTER TABLE public.quiz_sessions OWNER TO postgres;
+
+--
+-- TOC entry 5005 (class 0 OID 0)
+-- Dependencies: 226
+-- Name: TABLE quiz_sessions; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON TABLE public.quiz_sessions IS 'Live quiz sessions - generates class code';
+
+
+--
+-- TOC entry 5006 (class 0 OID 0)
+-- Dependencies: 226
+-- Name: COLUMN quiz_sessions.class_code; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.quiz_sessions.class_code IS 'Code students use to join (e.g., ABC123)';
+
+
+--
+-- TOC entry 5007 (class 0 OID 0)
+-- Dependencies: 226
+-- Name: COLUMN quiz_sessions.show_responses; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.quiz_sessions.show_responses IS 'Teacher toggles to show/hide bar graph';
+
+
+--
+-- TOC entry 5008 (class 0 OID 0)
+-- Dependencies: 226
+-- Name: COLUMN quiz_sessions.total_participants; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.quiz_sessions.total_participants IS 'Number of students who joined this session';
+
+
+--
+-- TOC entry 225 (class 1259 OID 16874)
+-- Name: quiz_sessions_session_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.quiz_sessions_session_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.quiz_sessions_session_id_seq OWNER TO postgres;
+
+--
+-- TOC entry 5009 (class 0 OID 0)
+-- Dependencies: 225
+-- Name: quiz_sessions_session_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.quiz_sessions_session_id_seq OWNED BY public.quiz_sessions.session_id;
+
+
+--
+-- TOC entry 220 (class 1259 OID 16827)
+-- Name: quizzes; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.quizzes (
+    quiz_id integer NOT NULL,
+    teacher_id integer,
+    title character varying(200) NOT NULL,
+    num_choices integer NOT NULL,
+    allow_multiple boolean DEFAULT false,
+    has_correct boolean DEFAULT false,
+    competition_mode boolean DEFAULT false,
+    start_with_slide boolean DEFAULT false,
+    minimize_result_window boolean DEFAULT false,
+    close_submission_after integer,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    quiz_mode character varying(20) DEFAULT 'easy'::character varying,
+    CONSTRAINT quizzes_num_choices_check CHECK (((num_choices >= 2) AND (num_choices <= 6)))
+);
+
+
+ALTER TABLE public.quizzes OWNER TO postgres;
+
+--
+-- TOC entry 5010 (class 0 OID 0)
+-- Dependencies: 220
+-- Name: TABLE quizzes; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON TABLE public.quizzes IS 'Quiz configurations with all settings';
+
+
+--
+-- TOC entry 219 (class 1259 OID 16826)
+-- Name: quizzes_quiz_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.quizzes_quiz_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.quizzes_quiz_id_seq OWNER TO postgres;
+
+--
+-- TOC entry 5011 (class 0 OID 0)
+-- Dependencies: 219
+-- Name: quizzes_quiz_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.quizzes_quiz_id_seq OWNED BY public.quizzes.quiz_id;
+
+
+--
+-- TOC entry 230 (class 1259 OID 16906)
+-- Name: student_answers; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.student_answers (
+    id integer NOT NULL,
+    student_id integer,
+    session_id integer,
+    question_id integer,
+    answer_id integer,
+    is_correct boolean DEFAULT false,
+    submitted_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    time_taken_seconds integer,
+    selected_options text
+);
+
+
+ALTER TABLE public.student_answers OWNER TO postgres;
+
+--
+-- TOC entry 5012 (class 0 OID 0)
+-- Dependencies: 230
+-- Name: TABLE student_answers; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON TABLE public.student_answers IS 'Student responses to questions';
+
+
+--
+-- TOC entry 229 (class 1259 OID 16905)
+-- Name: student_answers_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.student_answers_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.student_answers_id_seq OWNER TO postgres;
+
+--
+-- TOC entry 5013 (class 0 OID 0)
+-- Dependencies: 229
+-- Name: student_answers_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.student_answers_id_seq OWNED BY public.student_answers.id;
+
+
+--
+-- TOC entry 228 (class 1259 OID 16893)
+-- Name: students; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.students (
+    student_id integer NOT NULL,
+    session_id integer,
+    name character varying(100) NOT NULL,
+    joined_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+
+ALTER TABLE public.students OWNER TO postgres;
+
+--
+-- TOC entry 5014 (class 0 OID 0)
+-- Dependencies: 228
+-- Name: TABLE students; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON TABLE public.students IS 'Students who joined via class code';
+
+
+--
+-- TOC entry 227 (class 1259 OID 16892)
+-- Name: students_student_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.students_student_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.students_student_id_seq OWNER TO postgres;
+
+--
+-- TOC entry 5015 (class 0 OID 0)
+-- Dependencies: 227
+-- Name: students_student_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.students_student_id_seq OWNED BY public.students.student_id;
+
+
+--
+-- TOC entry 218 (class 1259 OID 16815)
+-- Name: teachers; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.teachers (
+    teacher_id integer NOT NULL,
+    username character varying(100) NOT NULL,
+    email character varying(100) NOT NULL,
+    password character varying(100) NOT NULL,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+
+ALTER TABLE public.teachers OWNER TO postgres;
+
+--
+-- TOC entry 5016 (class 0 OID 0)
+-- Dependencies: 218
+-- Name: TABLE teachers; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON TABLE public.teachers IS 'Teacher accounts';
+
+
+--
+-- TOC entry 217 (class 1259 OID 16814)
+-- Name: teachers_teacher_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.teachers_teacher_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.teachers_teacher_id_seq OWNER TO postgres;
+
+--
+-- TOC entry 5017 (class 0 OID 0)
+-- Dependencies: 217
+-- Name: teachers_teacher_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.teachers_teacher_id_seq OWNED BY public.teachers.teacher_id;
+
+
+--
+-- TOC entry 4784 (class 2604 OID 16863)
+-- Name: answers answer_id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.answers ALTER COLUMN answer_id SET DEFAULT nextval('public.answers_answer_id_seq'::regclass);
+
+
+--
+-- TOC entry 4783 (class 2604 OID 16849)
+-- Name: questions question_id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.questions ALTER COLUMN question_id SET DEFAULT nextval('public.questions_question_id_seq'::regclass);
+
+
+--
+-- TOC entry 4786 (class 2604 OID 16878)
+-- Name: quiz_sessions session_id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.quiz_sessions ALTER COLUMN session_id SET DEFAULT nextval('public.quiz_sessions_session_id_seq'::regclass);
+
+
+--
+-- TOC entry 4775 (class 2604 OID 16830)
+-- Name: quizzes quiz_id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.quizzes ALTER COLUMN quiz_id SET DEFAULT nextval('public.quizzes_quiz_id_seq'::regclass);
+
+
+--
+-- TOC entry 4793 (class 2604 OID 16909)
+-- Name: student_answers id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.student_answers ALTER COLUMN id SET DEFAULT nextval('public.student_answers_id_seq'::regclass);
+
+
+--
+-- TOC entry 4791 (class 2604 OID 16896)
+-- Name: students student_id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.students ALTER COLUMN student_id SET DEFAULT nextval('public.students_student_id_seq'::regclass);
+
+
+--
+-- TOC entry 4773 (class 2604 OID 16818)
+-- Name: teachers teacher_id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.teachers ALTER COLUMN teacher_id SET DEFAULT nextval('public.teachers_teacher_id_seq'::regclass);
+
+
+--
+-- TOC entry 4989 (class 0 OID 16860)
+-- Dependencies: 224
+-- Data for Name: answers; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.answers (answer_id, question_id, answer_text, answer_order, is_correct) FROM stdin;
+1	1	London	0	f
+2	1	Berlin	1	f
+3	1	Paris	2	t
+4	1	Madrid	3	f
+5	2	Choice A	0	f
+6	2	Choice B	1	f
+7	2	Choice C	2	f
+8	2	Choice D	3	f
+9	3	Choice A	0	f
+10	3	Choice B	1	f
+11	3	Choice C	2	f
+12	3	Choice D	3	f
+13	4	Choice A	0	t
+14	4	Choice B	1	f
+15	4	Choice C	2	f
+16	4	Choice D	3	f
+17	5	cat	0	t
+18	5	color	1	f
+19	5	object	2	f
+20	5	animal	3	f
+21	5	chicken	4	f
+22	6	Man	0	t
+23	6	country	1	f
+24	6	name	2	f
+25	6	food	3	f
+26	7	red	0	t
+27	7	brown	1	f
+28	7	forest	2	f
+29	7	food	3	f
+30	8	a	0	t
+31	8	b	1	t
+32	8	c	2	f
+33	8	d	3	f
+34	9	fixed	0	t
+35	9	not fixed	1	f
+36	9	damaged	2	f
+37	10	Beirut	0	t
+38	10	Tyre	1	f
+39	10	Saida	2	f
+40	10	Byblos	3	f
+41	10	Tripole	4	f
+42	10	Sour	5	f
+43	11	eh	0	t
+44	11	la2	1	f
+45	11	ehh	2	f
+46	11	la22	3	f
+47	12	eh	0	t
+48	12	la	1	f
+49	12	ehhh	2	f
+50	12	laaa	3	f
+51	13	1	0	t
+52	13	2	1	f
+53	14	1	0	t
+54	14	2	1	f
+55	15	QQ	0	t
+56	15	SS	1	f
+57	16	2w	0	t
+58	16	sx	1	f
+59	17	1	0	t
+60	17	2	1	t
+61	18	swim	0	t
+62	18	run	1	t
+63	18	eat	2	f
+64	18	sleep	3	f
+\.
+
+
+--
+-- TOC entry 4987 (class 0 OID 16846)
+-- Dependencies: 222
+-- Data for Name: questions; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.questions (question_id, quiz_id, question_text) FROM stdin;
+1	1	What is the capital of France?
+2	2	how old are you?
+3	3	how many legs do you have
+4	4	give me answer\n
+5	5	silver is a ?
+6	6	Lebanon is ?
+7	7	Color is ?
+8	8	test?
+9	9	try test num of choices?
+10	10	Capital of Lebanon?
+11	11	easy question test?
+12	12	hard one testt
+13	13	hard
+14	14	med
+15	15	HARDDD2
+16	16	med
+17	17	last one
+18	18	fav sport
+\.
+
+
+--
+-- TOC entry 4991 (class 0 OID 16875)
+-- Dependencies: 226
+-- Data for Name: quiz_sessions; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.quiz_sessions (session_id, quiz_id, class_code, status, started_at, closed_at, show_responses, total_participants, auto_close_minutes) FROM stdin;
+42	5	MK2JUK	closed	2026-01-13 21:49:05.411885	2026-01-13 23:49:11.86001	t	0	1
+43	8	3YH661	closed	2026-01-13 21:49:32.770767	2026-01-13 23:50:33.605875	t	1	1
+44	11	2YN8VB	closed	2026-01-14 17:23:28.758129	2026-01-14 19:24:12.467629	t	1	1
+45	12	CV0ZUH	closed	2026-01-14 17:25:15.660444	2026-01-14 19:26:49.024749	t	2	2
+46	13	79KCUZ	active	2026-01-14 17:27:35.26421	\N	t	0	1
+47	13	4X4HDA	closed	2026-01-14 17:27:46.104657	2026-01-14 19:28:26.546244	t	1	1
+48	14	G9VT7I	closed	2026-01-14 17:29:04.250862	2026-01-14 19:29:43.644781	t	1	1
+49	14	U96S33	closed	2026-01-14 17:44:57.986289	2026-01-14 19:45:25.17879	t	1	1
+50	15	KEGKJV	closed	2026-01-14 17:45:59.221679	2026-01-14 19:46:31.197083	t	1	1
+23	4	83SBPH	closed	2025-10-29 22:52:17.30692	2025-10-29 22:52:43.439514	t	1	\N
+51	16	98BY8N	active	2026-01-14 17:47:04.069461	\N	t	1	1
+24	4	SFDT12	closed	2025-10-29 22:54:05.586103	2025-10-29 22:54:49.781976	t	2	\N
+52	16	FYWO6S	closed	2026-01-14 17:47:34.738295	2026-01-14 19:59:51.583509	t	0	1
+26	5	RA56GM	closed	2026-01-13 13:51:25.720543	2026-01-13 15:52:34.842372	t	1	1
+27	6	9CKYSG	closed	2026-01-13 13:57:23.003507	2026-01-13 15:57:36.086617	t	0	1
+28	7	UO6C1D	closed	2026-01-13 13:58:21.210337	2026-01-13 15:59:21.557551	t	1	1
+53	17	DHM47U	closed	2026-01-14 18:01:16.412951	2026-01-14 20:02:16.577105	t	1	5
+29	8	FVW36P	closed	2026-01-13 15:31:00.312025	2026-01-13 17:32:01.42675	t	1	1
+30	8	43WSLO	closed	2026-01-13 15:36:14.31449	2026-01-13 17:36:56.073482	t	1	1
+31	8	C38653	closed	2026-01-13 15:40:35.154132	2026-01-13 17:41:36.186349	t	1	1
+32	8	L6U6KZ	closed	2026-01-13 15:43:05.524908	2026-01-13 17:44:05.89365	t	1	1
+33	4	X9HOUD	active	2026-01-13 15:44:36.288737	\N	t	1	1
+54	18	FZ62KC	active	2026-01-14 18:19:53.637441	\N	t	3	\N
+34	8	A8CNEK	closed	2026-01-13 15:46:04.408118	2026-01-13 17:46:45.603357	t	1	1
+35	8	VN0S01	closed	2026-01-13 15:46:51.026705	2026-01-13 17:47:06.866731	t	0	2
+36	9	NH7GSM	closed	2026-01-13 15:55:59.285582	2026-01-13 17:56:59.775477	t	0	1
+37	10	PK5BI3	closed	2026-01-13 17:46:14.870057	2026-01-13 19:47:15.269249	t	1	1
+38	10	DYTN9F	closed	2026-01-13 21:38:43.385468	2026-01-13 23:39:45.904596	t	1	\N
+55	17	UI87CG	closed	2026-01-14 18:25:55.060333	2026-01-14 20:31:35.088309	t	1	\N
+39	10	3GF6YA	closed	2026-01-13 21:43:11.685674	2026-01-13 23:44:28.842339	t	2	\N
+40	9	64T8ZP	closed	2026-01-13 21:47:47.304245	2026-01-13 23:47:55.743908	t	0	1
+41	7	0WDTGX	closed	2026-01-13 21:48:16.078982	2026-01-13 23:48:25.612404	t	0	1
+56	18	JPQ3BH	active	2026-01-14 18:31:45.476334	\N	t	1	\N
+57	18	ZSDZMK	active	2026-01-14 18:32:29.06014	\N	t	1	\N
+58	16	T1N977	active	2026-01-14 18:40:02.410715	\N	t	1	\N
+59	18	U3GNYT	active	2026-01-14 18:45:02.57692	\N	t	1	\N
+60	18	D4GHCX	active	2026-01-14 18:45:41.859164	\N	t	3	\N
+61	17	VFZHH0	closed	2026-01-14 18:49:01.371015	2026-01-14 20:50:02.233068	t	1	1
+62	18	CXLRRE	closed	2026-01-15 20:45:58.711847	2026-01-15 22:46:08.627303	t	0	2
+63	17	0PCMZ3	closed	2026-01-15 21:16:30.03733	2026-01-15 23:16:38.056574	t	0	5
+\.
+
+
+--
+-- TOC entry 4985 (class 0 OID 16827)
+-- Dependencies: 220
+-- Data for Name: quizzes; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.quizzes (quiz_id, teacher_id, title, num_choices, allow_multiple, has_correct, competition_mode, start_with_slide, minimize_result_window, close_submission_after, created_at, quiz_mode) FROM stdin;
+1	1	Sample Quiz	4	f	t	f	f	f	5	2025-10-28 16:31:29.018341	easy
+2	4	My Quiz	4	f	f	f	t	f	5	2025-10-29 12:51:16.398968	easy
+3	4	My Quiz2	4	f	f	f	t	f	5	2025-10-29 13:00:53.110556	easy
+4	4	test	4	t	t	t	t	t	1	2025-10-29 13:26:59.602565	easy
+5	4	silver is a ?	4	f	t	f	f	f	1	2026-01-13 15:51:15.007491	easy
+6	4	Lebanon is ?	4	f	t	f	f	f	1	2026-01-13 15:57:10.309072	easy
+7	4	Color is ?	4	f	t	f	f	f	1	2026-01-13 15:58:09.135653	easy
+8	4	test?	4	f	t	f	f	f	1	2026-01-13 17:30:49.793293	easy
+9	4	try test num of choices?	3	f	t	t	t	f	1	2026-01-13 17:55:47.050255	easy
+10	4	Capital of Lebanon?	6	f	t	t	t	f	1	2026-01-13 17:58:33.700148	easy
+11	4	easy question test?	4	f	t	f	t	f	1	2026-01-14 19:23:20.527349	easy
+12	4	hard one testt	4	f	t	t	t	f	2	2026-01-14 19:25:05.386955	easy
+13	4	hard	2	f	t	t	t	f	1	2026-01-14 19:27:21.849181	easy
+14	4	med	2	f	t	t	t	f	1	2026-01-14 19:28:48.972128	easy
+15	4	HARDDD2	2	f	t	t	t	f	1	2026-01-14 19:45:48.404313	hard
+16	4	med	2	f	t	t	t	f	1	2026-01-14 19:46:55.467112	medium
+17	4	last one	2	t	t	t	t	t	5	2026-01-14 20:01:05.746248	hard
+18	4	fav sport	4	t	t	f	t	f	1	2026-01-14 20:03:51.237743	easy
+\.
+
+
+--
+-- TOC entry 4995 (class 0 OID 16906)
+-- Dependencies: 230
+-- Data for Name: student_answers; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.student_answers (id, student_id, session_id, question_id, answer_id, is_correct, submitted_at, time_taken_seconds, selected_options) FROM stdin;
+13	27	24	4	14	f	2025-10-29 22:54:27.113614	13	\N
+14	29	26	5	17	t	2026-01-13 15:52:13.659396	3	\N
+15	30	28	7	26	t	2026-01-13 15:59:05.401147	5	\N
+16	31	29	8	30	t	2026-01-13 17:31:51.966085	15	\N
+17	31	29	8	30	t	2026-01-13 17:31:56.881746	19	\N
+18	32	30	8	31	t	2026-01-13 17:36:39.626432	5	\N
+19	33	31	8	30	t	2026-01-13 17:41:01.569261	9	\N
+20	33	31	8	31	t	2026-01-13 17:41:01.675071	9	\N
+58	61	60	18	62	t	2026-01-14 20:46:25.508196	6	\N
+21	34	32	8	30	t	2026-01-13 17:43:37.615001	7	\N
+22	34	32	8	31	t	2026-01-13 17:43:37.760992	7	\N
+23	35	33	4	13	t	2026-01-13 17:45:10.255034	10	\N
+57	61	60	18	61	t	2026-01-14 20:46:25.444838	6	\N
+24	36	34	8	30	t	2026-01-13 17:46:33.126271	11	\N
+25	36	34	8	31	t	2026-01-13 17:46:33.240136	11	\N
+26	37	37	10	38	f	2026-01-13 19:46:59.700101	4	\N
+27	38	38	10	38	f	2026-01-13 23:39:31.640425	9	\N
+28	39	39	10	38	f	2026-01-13 23:43:35.916814	5	\N
+29	40	39	10	41	f	2026-01-13 23:44:02.564568	3	\N
+30	41	43	8	31	f	2026-01-13 23:50:31.067856	34	\N
+31	41	43	8	32	f	2026-01-13 23:50:31.165523	34	\N
+32	42	44	11	44	f	2026-01-14 19:24:02.702733	6	\N
+33	43	45	12	47	t	2026-01-14 19:26:16.662548	12	\N
+34	43	45	12	47	t	2026-01-14 19:26:20.921345	16	\N
+35	44	45	12	48	f	2026-01-14 19:26:41.46356	4	\N
+36	46	48	14	54	f	2026-01-14 19:29:38.553037	6	\N
+37	49	51	16	58	f	2026-01-14 20:01:39.722812	852	\N
+38	50	53	17	59	t	2026-01-14 20:01:57.309783	4	\N
+39	50	53	17	60	t	2026-01-14 20:01:57.457936	4	\N
+40	51	54	18	62	t	2026-01-14 20:20:12.401572	7	\N
+41	51	54	18	61	t	2026-01-14 20:20:12.483334	7	\N
+59	62	61	17	59	t	2026-01-14 20:49:46.705494	5	\N
+42	52	54	18	63	f	2026-01-14 20:24:57.965757	39	\N
+43	52	54	18	64	f	2026-01-14 20:24:58.031965	39	\N
+60	62	61	17	60	t	2026-01-14 20:49:46.779881	5	\N
+44	53	54	18	61	f	2026-01-14 20:25:20.788574	7	\N
+45	53	54	18	63	f	2026-01-14 20:25:20.864613	7	\N
+46	54	55	17	60	t	2026-01-14 20:26:12.979368	4	\N
+47	54	55	17	59	t	2026-01-14 20:26:13.044003	4	\N
+48	55	56	18	61	t	2026-01-14 20:32:05.682521	7	\N
+49	55	56	18	62	t	2026-01-14 20:32:05.733865	7	\N
+50	56	57	18	61	f	2026-01-14 20:32:47.299837	6	\N
+51	56	57	18	63	f	2026-01-14 20:32:47.38391	6	\N
+52	57	58	16	57	t	2026-01-14 20:40:26.2731	3	\N
+53	58	59	18	61	f	2026-01-14 20:45:17.0527	4	\N
+54	58	59	18	64	f	2026-01-14 20:45:17.089531	4	\N
+55	60	60	18	64	f	2026-01-14 20:46:02.345152	6	\N
+56	60	60	18	63	f	2026-01-14 20:46:02.399232	6	\N
+\.
+
+
+--
+-- TOC entry 4993 (class 0 OID 16893)
+-- Dependencies: 228
+-- Data for Name: students; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.students (student_id, session_id, name, joined_at) FROM stdin;
+25	23	ahmad	2025-10-29 22:52:32.607049
+27	24	hhi	2025-10-29 22:54:13.800752
+28	24	hhi	2025-10-29 22:54:43.805535
+29	26	malak	2026-01-13 15:52:09.678944
+30	28	ali	2026-01-13 15:58:59.536217
+31	29	mlk	2026-01-13 17:31:36.80472
+32	30	mlk	2026-01-13 17:36:33.835948
+33	31	sss	2026-01-13 17:40:51.793606
+34	32	mlk	2026-01-13 17:43:29.96951
+35	33	aaa	2026-01-13 17:44:59.71995
+36	34	A	2026-01-13 17:46:21.583165
+37	37	malak	2026-01-13 19:46:55.535978
+38	38	ahmad	2026-01-13 23:39:22.097654
+39	39	mlk	2026-01-13 23:43:30.593661
+40	39	hamd	2026-01-13 23:43:59.382753
+41	43	ahmad	2026-01-13 23:49:56.139008
+42	44	ahmad	2026-01-14 19:23:56.378678
+43	45	ahmad	2026-01-14 19:26:04.301842
+44	45	ahmad	2026-01-14 19:26:36.389177
+45	47	ahmad	2026-01-14 19:28:14.508486
+46	48	Ahmad	2026-01-14 19:29:31.866359
+47	49	MA	2026-01-14 19:45:18.439381
+48	50	sss	2026-01-14 19:46:21.585988
+49	51	SS	2026-01-14 19:47:27.031688
+50	53	ahmad	2026-01-14 20:01:52.191774
+51	54	ahmad	2026-01-14 20:20:04.608511
+52	54	malk	2026-01-14 20:24:18.799516
+53	54	jo	2026-01-14 20:25:13.53432
+54	55	joe	2026-01-14 20:26:08.852082
+55	56	ali	2026-01-14 20:31:58.073973
+56	57	ma	2026-01-14 20:32:40.269619
+57	58	mk	2026-01-14 20:40:23.188278
+58	59	as	2026-01-14 20:45:12.847301
+59	60	asas	2026-01-14 20:45:54.302707
+60	60	asas	2026-01-14 20:45:56.025854
+61	60	ad	2026-01-14 20:46:19.382565
+62	61	aml	2026-01-14 20:49:40.904078
+\.
+
+
+--
+-- TOC entry 4983 (class 0 OID 16815)
+-- Dependencies: 218
+-- Data for Name: teachers; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.teachers (teacher_id, username, email, password, created_at) FROM stdin;
+1	john_smith	john@school.com	password123	2025-10-28 16:31:29.018341
+2	malak	malak@teacher.com	123	2025-10-28 17:12:22.71731
+4	malak12	malak12@teacher.com	8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92	2025-10-29 12:50:19.588236
+6	boss	boss@email.com	8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92	2026-01-14 20:05:10.004148
+\.
+
+
+--
+-- TOC entry 5018 (class 0 OID 0)
+-- Dependencies: 223
+-- Name: answers_answer_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.answers_answer_id_seq', 64, true);
+
+
+--
+-- TOC entry 5019 (class 0 OID 0)
+-- Dependencies: 221
+-- Name: questions_question_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.questions_question_id_seq', 18, true);
+
+
+--
+-- TOC entry 5020 (class 0 OID 0)
+-- Dependencies: 225
+-- Name: quiz_sessions_session_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.quiz_sessions_session_id_seq', 63, true);
+
+
+--
+-- TOC entry 5021 (class 0 OID 0)
+-- Dependencies: 219
+-- Name: quizzes_quiz_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.quizzes_quiz_id_seq', 18, true);
+
+
+--
+-- TOC entry 5022 (class 0 OID 0)
+-- Dependencies: 229
+-- Name: student_answers_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.student_answers_id_seq', 60, true);
+
+
+--
+-- TOC entry 5023 (class 0 OID 0)
+-- Dependencies: 227
+-- Name: students_student_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.students_student_id_seq', 62, true);
+
+
+--
+-- TOC entry 5024 (class 0 OID 0)
+-- Dependencies: 217
+-- Name: teachers_teacher_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.teachers_teacher_id_seq', 6, true);
+
+
+--
+-- TOC entry 4810 (class 2606 OID 16868)
+-- Name: answers answers_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.answers
+    ADD CONSTRAINT answers_pkey PRIMARY KEY (answer_id);
+
+
+--
+-- TOC entry 4808 (class 2606 OID 16853)
+-- Name: questions questions_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.questions
+    ADD CONSTRAINT questions_pkey PRIMARY KEY (question_id);
+
+
+--
+-- TOC entry 4817 (class 2606 OID 16886)
+-- Name: quiz_sessions quiz_sessions_class_code_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.quiz_sessions
+    ADD CONSTRAINT quiz_sessions_class_code_key UNIQUE (class_code);
+
+
+--
+-- TOC entry 4819 (class 2606 OID 16884)
+-- Name: quiz_sessions quiz_sessions_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.quiz_sessions
+    ADD CONSTRAINT quiz_sessions_pkey PRIMARY KEY (session_id);
+
+
+--
+-- TOC entry 4805 (class 2606 OID 16839)
+-- Name: quizzes quizzes_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.quizzes
+    ADD CONSTRAINT quizzes_pkey PRIMARY KEY (quiz_id);
+
+
+--
+-- TOC entry 4826 (class 2606 OID 16913)
+-- Name: student_answers student_answers_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.student_answers
+    ADD CONSTRAINT student_answers_pkey PRIMARY KEY (id);
+
+
+--
+-- TOC entry 4822 (class 2606 OID 16899)
+-- Name: students students_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.students
+    ADD CONSTRAINT students_pkey PRIMARY KEY (student_id);
+
+
+--
+-- TOC entry 4798 (class 2606 OID 16825)
+-- Name: teachers teachers_email_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.teachers
+    ADD CONSTRAINT teachers_email_key UNIQUE (email);
+
+
+--
+-- TOC entry 4800 (class 2606 OID 16821)
+-- Name: teachers teachers_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.teachers
+    ADD CONSTRAINT teachers_pkey PRIMARY KEY (teacher_id);
+
+
+--
+-- TOC entry 4802 (class 2606 OID 16823)
+-- Name: teachers teachers_username_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.teachers
+    ADD CONSTRAINT teachers_username_key UNIQUE (username);
+
+
+--
+-- TOC entry 4813 (class 2606 OID 16948)
+-- Name: answers unique_order; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.answers
+    ADD CONSTRAINT unique_order UNIQUE (question_id, answer_order);
+
+
+--
+-- TOC entry 4811 (class 1259 OID 16936)
+-- Name: idx_answers_question; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_answers_question ON public.answers USING btree (question_id);
+
+
+--
+-- TOC entry 4806 (class 1259 OID 16935)
+-- Name: idx_questions_quiz; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_questions_quiz ON public.questions USING btree (quiz_id);
+
+
+--
+-- TOC entry 4803 (class 1259 OID 16934)
+-- Name: idx_quizzes_teacher; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_quizzes_teacher ON public.quizzes USING btree (teacher_id);
+
+
+--
+-- TOC entry 4814 (class 1259 OID 16937)
+-- Name: idx_sessions_code; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_sessions_code ON public.quiz_sessions USING btree (class_code);
+
+
+--
+-- TOC entry 4815 (class 1259 OID 16938)
+-- Name: idx_sessions_quiz; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_sessions_quiz ON public.quiz_sessions USING btree (quiz_id);
+
+
+--
+-- TOC entry 4823 (class 1259 OID 16941)
+-- Name: idx_student_answers_question; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_student_answers_question ON public.student_answers USING btree (question_id);
+
+
+--
+-- TOC entry 4824 (class 1259 OID 16940)
+-- Name: idx_student_answers_session; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_student_answers_session ON public.student_answers USING btree (session_id);
+
+
+--
+-- TOC entry 4820 (class 1259 OID 16939)
+-- Name: idx_students_session; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_students_session ON public.students USING btree (session_id);
+
+
+--
+-- TOC entry 4836 (class 2620 OID 16943)
+-- Name: students trigger_update_participant_count; Type: TRIGGER; Schema: public; Owner: postgres
+--
+
+CREATE TRIGGER trigger_update_participant_count AFTER INSERT ON public.students FOR EACH ROW EXECUTE FUNCTION public.update_participant_count();
+
+
+--
+-- TOC entry 4829 (class 2606 OID 16869)
+-- Name: answers answers_question_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.answers
+    ADD CONSTRAINT answers_question_id_fkey FOREIGN KEY (question_id) REFERENCES public.questions(question_id) ON DELETE CASCADE;
+
+
+--
+-- TOC entry 4828 (class 2606 OID 16854)
+-- Name: questions questions_quiz_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.questions
+    ADD CONSTRAINT questions_quiz_id_fkey FOREIGN KEY (quiz_id) REFERENCES public.quizzes(quiz_id) ON DELETE CASCADE;
+
+
+--
+-- TOC entry 4830 (class 2606 OID 16887)
+-- Name: quiz_sessions quiz_sessions_quiz_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.quiz_sessions
+    ADD CONSTRAINT quiz_sessions_quiz_id_fkey FOREIGN KEY (quiz_id) REFERENCES public.quizzes(quiz_id) ON DELETE CASCADE;
+
+
+--
+-- TOC entry 4827 (class 2606 OID 16840)
+-- Name: quizzes quizzes_teacher_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.quizzes
+    ADD CONSTRAINT quizzes_teacher_id_fkey FOREIGN KEY (teacher_id) REFERENCES public.teachers(teacher_id) ON DELETE CASCADE;
+
+
+--
+-- TOC entry 4832 (class 2606 OID 16929)
+-- Name: student_answers student_answers_answer_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.student_answers
+    ADD CONSTRAINT student_answers_answer_id_fkey FOREIGN KEY (answer_id) REFERENCES public.answers(answer_id) ON DELETE CASCADE;
+
+
+--
+-- TOC entry 4833 (class 2606 OID 16924)
+-- Name: student_answers student_answers_question_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.student_answers
+    ADD CONSTRAINT student_answers_question_id_fkey FOREIGN KEY (question_id) REFERENCES public.questions(question_id) ON DELETE CASCADE;
+
+
+--
+-- TOC entry 4834 (class 2606 OID 16919)
+-- Name: student_answers student_answers_session_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.student_answers
+    ADD CONSTRAINT student_answers_session_id_fkey FOREIGN KEY (session_id) REFERENCES public.quiz_sessions(session_id) ON DELETE CASCADE;
+
+
+--
+-- TOC entry 4835 (class 2606 OID 16914)
+-- Name: student_answers student_answers_student_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.student_answers
+    ADD CONSTRAINT student_answers_student_id_fkey FOREIGN KEY (student_id) REFERENCES public.students(student_id) ON DELETE CASCADE;
+
+
+--
+-- TOC entry 4831 (class 2606 OID 16900)
+-- Name: students students_session_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.students
+    ADD CONSTRAINT students_session_id_fkey FOREIGN KEY (session_id) REFERENCES public.quiz_sessions(session_id) ON DELETE CASCADE;
+
+
+-- Completed on 2026-01-16 15:09:31
+
+--
+-- PostgreSQL database dump complete
+--
+
+\unrestrict vHmHjZaB3hOXmuXpfJbs9TZNNrV2setMgf09Leeg5UNfvgkky8TAMccJvp6PtII
+
