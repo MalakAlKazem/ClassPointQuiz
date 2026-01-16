@@ -5,7 +5,6 @@ A quiz management system integrated with PowerPoint, allowing teachers to create
 ## 📋 Table of Contents
 - [Overview](#overview)
 - [Video Demo](#video-demo)
-- [Streamlit Dashboard Links](#streamlit-dashboard-links)
 - [Features](#features)
 - [System Architecture](#system-architecture)
 - [How the PowerPoint Add-in Works](#how-the-powerpoint-add-in-works)
@@ -45,22 +44,6 @@ Click the image below to watch a short demo of the project on YouTube:
 > - Quiz creation, running, insertion into slides
 > - Live session with class code
 > - Student participation and live results
-
-## 🔗 Streamlit Dashboard Links
-
-These web dashboards are connected to the **same PostgreSQL database hosted on Neon**. (Note: you will find out that the teacher and student files uploaded in the project are more updated than in the links)
-
-### 👨‍🏫 Teacher Dashboard (Streamlit Cloud)
-Used for teacher login, quiz creation, and dashboard access.
-
-🔗 https://quizapp-malakalkazem.streamlit.app/
-
----
-
-### 🎓 Student Dashboard (Streamlit Cloud)
-Used by students to join quiz sessions using a class code.
-
-🔗 https://quizapp-joinclass.streamlit.app/
 
 ---
 
@@ -186,14 +169,14 @@ This system uses **polling** (periodic requests) rather than WebSockets for live
 ## 🔗 Streamlit Dashboard Links
 
 ### Production (Streamlit Cloud)
-- **Teacher Dashboard**: https://quizapp-teacher. streamlit.app
+- **Teacher Dashboard**: https://quizapp-teacher.streamlit.app
 - **Student Dashboard**:  https://quizapp-joinclass.streamlit.app
 
 ### Local Development
 - **Teacher Dashboard**: http://localhost:8501
 - **Student Dashboard**: http://localhost:8502
 
-Both dashboards connect to the PostgreSQL database hosted on Neon.  They support full read/write operations for their respective user roles. 
+Both dashboards connect to the PostgreSQL database hosted on Neon.  They support full read/write operations for their respective user roles.(Note that the teacher and student files uploaded in the project are more updated) 
 
 ## 📦 Prerequisites
 
