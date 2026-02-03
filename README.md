@@ -1,6 +1,6 @@
 # ClassPointQuiz
 
-A quiz management system integrated with PowerPoint, allowing teachers to create interactive quizzes, manage live sessions, and track student responses.
+An interactive quiz platform that seamlessly integrates with PowerPoint, enabling teachers to create, run, and monitor live quiz sessions with real-time student responses. Built with a C# PowerPoint add-in, FastAPI backend, and Streamlit web interfaces for an engaging classroom experience.
 
 ## 📋 Table of Contents
 - [Overview](#overview)
